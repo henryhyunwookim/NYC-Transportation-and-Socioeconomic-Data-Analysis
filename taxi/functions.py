@@ -196,16 +196,17 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="Downl
     
     for pu_do in ["PU", "DO"]:
         cdta_df[f'{pu_do}_total_trip_count'] = street_hail_df.groupby(f'{pu_do}_CDTA').count().iloc[:,0]
-        for agg_func, (pu_df, do_df) in zip(["sum", "average"], [(pu_sum_df, do_sum_df), (pu_mean_df, do_mean_df)]):
+        distance_duration_df = street_hail_df.groupby(f'{pu_do}_CDTA').sum()[['trip_distance', 'duration']]
+        cdta_df[f'{pu_do}_minute_per_mile'] =\
+            distance_duration_df['trip_distance'] / distance_duration_df['duration']
+
+        for agg_func, (pu_df, do_df) in zip(["total", "average"], [(pu_sum_df, do_sum_df), (pu_mean_df, do_mean_df)]):
             cdta_df[f"{pu_do}_{agg_func}_passenger_count"] = pu_df['passenger_count']
             cdta_df[f"{pu_do}_{agg_func}_trip_distance (mile)"] = pu_df['trip_distance']
             cdta_df[f"{pu_do}_{agg_func}_fare"] = pu_df['total_amount']
             cdta_df[f"{pu_do}_{agg_func}_congestion_surcharge"] = pu_df['congestion_surcharge']
             cdta_df[f"{pu_do}_{agg_func}_airport_fee"] = pu_df['airport_fee']
             cdta_df[f"{pu_do}_{agg_func}_duration (min)"] = pu_df['duration']
-            distance_duration_df = street_hail_df.groupby(f'{pu_do}_CDTA').sum()[['trip_distance', 'duration']]
-            cdta_df[f'{pu_do}_{agg_func}_minute_per_mile'] =\
-                distance_duration_df['trip_distance'] / distance_duration_df['duration']
             
             cdta_df[f"{pu_do}_{agg_func}_passenger_count"] = do_df['passenger_count']
             cdta_df[f"{pu_do}_{agg_func}_trip_distance (mile)"] = do_df['trip_distance']
@@ -213,9 +214,6 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="Downl
             cdta_df[f"{pu_do}_{agg_func}_congestion_surcharge"] = do_df['congestion_surcharge']
             cdta_df[f"{pu_do}_{agg_func}_airport_fee"] = do_df['airport_fee']
             cdta_df[f"{pu_do}_{agg_func}_duration (min)"] = do_df['duration']
-            distance_duration_df = street_hail_df.groupby(f'{pu_do}_CDTA').sum()[['trip_distance', 'duration']]
-            cdta_df[f'{pu_do}_{agg_func}_minute_per_mile'] =\
-                distance_duration_df['trip_distance'] / distance_duration_df['duration']
 
     # DFs for PU trip counts
     pu_day_count_df = street_hail_df.groupby(['PU_CDTA', 'PU_day']).count().reset_index()\
@@ -478,13 +476,12 @@ def plot_trips_per_month(dfs, year_months, pu_do):
 
 def plot_on_map(df, pu_do):
     cols = [
-        f'{pu_do}_sum_passenger_count',
-        f'{pu_do}_sum_fare',
-        f'{pu_do}_sum_congestion_surcharge',
-        f'{pu_do}_sum_airport_fee',
-        f'{pu_do}_sum_duration (min)',
-        f'{pu_do}_sum_trip_distance (mile)',
-        f'{pu_do}_sum_minute_per_mile',
+        f'{pu_do}_total_passenger_count',
+        f'{pu_do}_total_fare',
+        f'{pu_do}_total_congestion_surcharge',
+        f'{pu_do}_total_airport_fee',
+        f'{pu_do}_total_duration (min)',
+        f'{pu_do}_total_trip_distance (mile)',
         f'{pu_do}_total_trip_count',
         f'{pu_do}_average_passenger_count',
         f'{pu_do}_average_fare',
@@ -492,16 +489,15 @@ def plot_on_map(df, pu_do):
         f'{pu_do}_average_airport_fee',
         f'{pu_do}_average_duration (min)',
         f'{pu_do}_average_trip_distance (mile)',
-        f'{pu_do}_average_minute_per_mile'
+        f'{pu_do}_minute_per_mile'
     ]
 
-    fig, axes = plt.subplots(8, 2, figsize=(15,50))
-    fig.delaxes(axes[7][1])
+    fig, axes = plt.subplots(7, 2, figsize=(15,50))
     for i, col in enumerate(cols):
-        if i < 8:
-            ax = axes[i%8, 0]
+        if i < 7:
+            ax = axes[i%7, 0]
         else:
-            ax = axes[i%8, 1]
+            ax = axes[i%7, 1]
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("bottom", size="5%", pad=0.5)
         vmin, vmax = df[col].min(), df[col].max()
