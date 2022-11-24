@@ -193,10 +193,9 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="Downl
     do_mean_df = street_hail_df.groupby("DO_CDTA").mean()
 
     cdta_df = taxi_zones_df.set_index("CDTA")[["CDTA_name", "borough"]].drop_duplicates()
-
-    cdta_df['PU_total_trip_count'] = street_hail_df.groupby('PU_CDTA').count().iloc[:,0]
     
     for pu_do in ["PU", "DO"]:
+        cdta_df[f'{pu_do}_total_trip_count'] = street_hail_df.groupby(f'{pu_do}_CDTA').count().iloc[:,0]
         for agg_func, (pu_df, do_df) in zip(["sum", "average"], [(pu_sum_df, do_sum_df), (pu_mean_df, do_mean_df)]):
             cdta_df[f"{pu_do}_{agg_func}_passenger_count"] = pu_df['passenger_count']
             cdta_df[f"{pu_do}_{agg_func}_trip_distance (mile)"] = pu_df['trip_distance']
