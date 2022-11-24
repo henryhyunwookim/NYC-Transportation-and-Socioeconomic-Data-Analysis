@@ -1,0 +1,18 @@
+https://www.matecdev.com/posts/point-in-polygon.html#how-to-check-if-a-point-is-inside-a-polygon-in-python
+
+Dataset Containing NTA Data (The one which WORKS) - https://data.cityofnewyork.us/City-Government/2010-Neighborhood-Tabulation-Areas-NTAs-/cpf4-rkhq
+
+Dataset Containing CDTA Mapping (The one with SCALING ISSUES but MIGHT come handy in mapping NTA-TO-CDTA) - https://www.nyc.gov/site/planning/data-maps/open-data/census-download-metadata.page
+
+
+NOTEBOOKS:
+1) Bus Data Exploration.ipynb - We realize that there is a problem with the dataset . just keeping it in case I need for future analysis. Mapping CDTA to NTA etc.
+
+2) Bus Data New.ipynb - For each borough, we find NTA to Day Mapping -> *takes hours to run* but we can manage with the 5 datasets. - 3 months of data.
+
+3) EDA.ipynb - Contains visualizations... daywise bus frequency for each NTA and weekday vs weekday frequency for each NTA 
+
+
+FOR SUBWAY:
+copy most of the code from Bus Data New.ipynb
+only remove this line of code => if nta['boroname'][ntaIDX] == 'Staten Island': and change indentation.
