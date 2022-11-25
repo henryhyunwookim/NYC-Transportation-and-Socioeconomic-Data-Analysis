@@ -140,7 +140,7 @@ def map_taxi_zone_to_cdta(nynta2020_df, taxi_zones_df):
     # Also add the name of each CDTA to the taxi zones dataframe.
     taxi_zones_df['NTA'] = taxi_zones_df.LocationID.apply(lambda x: idx_dict.get(x, ""))
     taxi_zones_df['CDTA'] = taxi_zones_df['NTA'].apply(lambda x: x[:4])
-    taxi_zones_df['CDTA_name'] = taxi_zones_df['CDTA'].map(cdta_dict).fillna("")
+    taxi_zones_df['CDTA_name'] = taxi_zones_df['CDTA'].map(cdta_dict).fillna("").apply(lambda x: " ".join(x.split()[1:]) if "EWR" not in x else x)
 
     return taxi_zones_df, idx_dict
 
@@ -257,6 +257,7 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="Downl
     # Add geo data for each CDTA
     cdta_df["geometry"] = cdta_df.index.map(cdta_geo_dict)
     cdta_df = gpd.GeoDataFrame(cdta_df).set_geometry("geometry")
+    cdta_df = cdta_df.reset_index().rename(columns={"index": "CDTA"})
 
     if folder_name != None:
         path = os.getcwd() + "\\" + folder_name
