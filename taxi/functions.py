@@ -11,6 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from tabulate import tabulate
 
 
 def load_taxi_trip_data(source_url, folder_name="Download"):
@@ -140,7 +141,7 @@ def map_taxi_zone_to_cdta(nynta2020_df, taxi_zones_df):
     # Also add the name of each CDTA to the taxi zones dataframe.
     taxi_zones_df['NTA'] = taxi_zones_df.LocationID.apply(lambda x: idx_dict.get(x, ""))
     taxi_zones_df['CDTA'] = taxi_zones_df['NTA'].apply(lambda x: x[:4])
-    taxi_zones_df['CDTA_name'] = taxi_zones_df['CDTA'].map(cdta_dict).fillna("")
+    taxi_zones_df['CDTA_name'] = taxi_zones_df['CDTA'].map(cdta_dict).fillna("").apply(lambda x: " ".join(x.split()[1:]) if "EWR" not in x else x)
 
     return taxi_zones_df, idx_dict
 
@@ -257,6 +258,7 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="Downl
     # Add geo data for each CDTA
     cdta_df["geometry"] = cdta_df.index.map(cdta_geo_dict)
     cdta_df = gpd.GeoDataFrame(cdta_df).set_geometry("geometry")
+    cdta_df = cdta_df.reset_index().rename(columns={"index": "CDTA"})
 
     if folder_name != None:
         path = os.getcwd() + "\\" + folder_name
@@ -511,3 +513,50 @@ def plot_on_map(df, pu_do):
             vmin=vmin,
             vmax=vmax
         )
+
+
+def create_interactive_map(df, col, m=None):
+    df = df[['CDTA', 'CDTA_name', 'borough', col, 'geometry']]
+
+    if m == None:
+        return df.explore(
+            column=col,
+            style_kwds=dict(color="black", weight=1), # use black outline
+            legend_kwds=dict(colorbar=False, fmt="{:,}"),
+            tooltip_kwds=dict(localize=True),
+            tiles="CartoDB positron",
+            scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
+            cmap='Reds',
+            k=5, # bins
+            name="All boroughs"
+        )
+    else:
+        return df.explore(
+            column=col,
+            style_kwds=dict(color="black", weight=1), # use black outline
+            legend_kwds=dict(colorbar=False, fmt="{:,}", caption=col+' without Manhattan'),
+            tooltip_kwds=dict(localize=True),
+            tiles="CartoDB positron",
+            scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
+            cmap='Reds',
+            k=5, # bins
+            name="All boroughs except Manhattan",
+            m=m
+        )
+
+
+def print_top_table(df, col, top_n=10, excluding_manhattan=False):
+    top_cdta_df = df[['CDTA', 'CDTA_name', 'borough', col]].sort_values(col, ascending=False)[:top_n].reset_index(drop=True)
+    top_cdta_df["Rank"] = [idx+1 for idx in top_cdta_df.index]
+    top_cdta_df = top_cdta_df[["Rank", "borough", "CDTA", "CDTA_name", col]]
+    top_cdta_df = top_cdta_df.rename(columns={"borough": "Borough"})
+    if excluding_manhattan:
+        print(f"\t<< Top {top_n} CDTAs based on {col}, excluding Manhattan >>")
+    else:
+        print(f"\t<< Top {top_n} CDTAs based on {col} >>")
+    print(tabulate(top_cdta_df,
+                    headers= top_cdta_df.columns,
+                    showindex=False,
+                    tablefmt='simple_grid',
+                    floatfmt=',.7g'))
+    print("----------------------------------------------------------------------------------------------------------")
