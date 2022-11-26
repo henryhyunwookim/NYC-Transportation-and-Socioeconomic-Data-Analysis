@@ -11,6 +11,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from tabulate import tabulate
 
 
 def load_taxi_trip_data(source_url, folder_name="Download"):
@@ -512,3 +513,50 @@ def plot_on_map(df, pu_do):
             vmin=vmin,
             vmax=vmax
         )
+
+
+def create_interactive_map(df, col, m=None):
+    df = df[['CDTA', 'CDTA_name', 'borough', col, 'geometry']]
+
+    if m == None:
+        return df.explore(
+            column=col,
+            style_kwds=dict(color="black", weight=1), # use black outline
+            legend_kwds=dict(colorbar=False, fmt="{:,}"),
+            tooltip_kwds=dict(localize=True),
+            tiles="CartoDB positron",
+            scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
+            cmap='Reds',
+            k=5, # bins
+            name="All boroughs"
+        )
+    else:
+        return df.explore(
+            column=col,
+            style_kwds=dict(color="black", weight=1), # use black outline
+            legend_kwds=dict(colorbar=False, fmt="{:,}", caption=col+' without Manhattan'),
+            tooltip_kwds=dict(localize=True),
+            tiles="CartoDB positron",
+            scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
+            cmap='Reds',
+            k=5, # bins
+            name="All boroughs except Manhattan",
+            m=m
+        )
+
+
+def print_top_table(df, col, top_n=10, excluding_manhattan=False):
+    top_cdta_df = df[['CDTA', 'CDTA_name', 'borough', col]].sort_values(col, ascending=False)[:top_n].reset_index(drop=True)
+    top_cdta_df["Rank"] = [idx+1 for idx in top_cdta_df.index]
+    top_cdta_df = top_cdta_df[["Rank", "borough", "CDTA", "CDTA_name", col]]
+    top_cdta_df = top_cdta_df.rename(columns={"borough": "Borough"})
+    if excluding_manhattan:
+        print(f"\t<< Top {top_n} CDTAs based on {col}, excluding Manhattan >>")
+    else:
+        print(f"\t<< Top {top_n} CDTAs based on {col} >>")
+    print(tabulate(top_cdta_df,
+                    headers= top_cdta_df.columns,
+                    showindex=False,
+                    tablefmt='simple_grid',
+                    floatfmt=',.7g'))
+    print("----------------------------------------------------------------------------------------------------------")
