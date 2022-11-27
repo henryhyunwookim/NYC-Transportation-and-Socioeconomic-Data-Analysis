@@ -14,7 +14,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tabulate import tabulate
 
 
-def load_taxi_trip_data(source_url, folder_name="Download"):
+def load_taxi_trip_data(source_url, folder_name="data"):
     """
     Download yellow and green taxi trip data in the local drive and load them as dataframes.
     source_url = "https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page"
@@ -72,7 +72,7 @@ def concat_dataframes(dataframes_dict):
     return street_hail_df
 
 
-def load_taxi_zones_shp(source_url, folder_name="Download", target_filename = "taxi_zones.zip"):
+def load_taxi_zones_shp(source_url, folder_name="data", target_filename = "taxi_zones.zip"):
     """
     Download taxi zones data in the local drive and load .shp file as dataframe.
     The taxi zones are roughly based on NYC Department of City Planning’s Neighborhood Tabulation Areas (NTAs).
@@ -183,7 +183,7 @@ def add_features(street_hail_df, zone_borough_dict, taxi_zone_dict):
     return street_hail_df
 
 
-def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="Download"):
+def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="data"):
     """
     Get a dataframe containing statistics about taxi trips on pickup and dropoff CDTAs.
     """
@@ -272,7 +272,7 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="Downl
     return cdta_df
 
 
-def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="Download"):
+def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="data"):
     path = os.getcwd() + "\\" + folder_name
     if not os.path.exists(path):
         os.makedirs(path)
@@ -297,7 +297,7 @@ def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_n
     return dfs, year_months
 
 
-def load_cdta_df(folder_name="Download"):
+def load_cdta_df(folder_name="data"):
     path = os.getcwd() + "\\" + folder_name
     cdta_df = pd.read_csv(f'{path}/cdta_df.csv', index_col=0)
 
@@ -310,7 +310,7 @@ def load_cdta_df(folder_name="Download"):
     return cdta_df
 
 
-def load_cdta_df_per_month(folder_name="Download",\
+def load_cdta_df_per_month(folder_name="data",\
     year_month_list = ['2022-01', '2022-02', '2022-03', '2022-04', '2022-05', '2022-06']):
     path = os.getcwd() + "\\" + folder_name
 
@@ -444,7 +444,7 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
         year_month = "Jan-Jun 2022"
     if save_png:
         matplotlib.use('Agg')
-        path = os.getcwd() + "\\" + "png"
+        path = os.getcwd() + "\\" + "data\\png"
         if not os.path.exists(path):
             os.makedirs(path)
         filepath = f'{path}/{year_month}.png'
@@ -468,7 +468,7 @@ def plot_trips_per_month(dfs, year_months, pu_do):
     # Create GIF using PNG files
     print("Getting a GIF file using the PNG files.")
     images = []
-    path = os.getcwd() + "\\" + "png"
+    path = os.getcwd() + "\\" + "data\\png"
     for file_name in sorted(os.listdir(path)):
         if (file_name.endswith(".png")) and (pu_do in file_name):
             file_path = os.path.join(path, file_name)
