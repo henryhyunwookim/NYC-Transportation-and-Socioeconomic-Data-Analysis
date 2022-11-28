@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tabulate import tabulate
+import webbrowser
+import folium
 
 
 def load_taxi_trip_data(source_url, folder_name="data"):
@@ -327,6 +329,117 @@ def load_cdta_df_per_month(folder_name="data",\
     return dfs, year_months
 
 
+def plot_total_trips_interactive(pickup_or_dropoff):
+    # 0. Load data and set pu_do.
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    if pickup_or_dropoff == "Pickup":
+        pu_do = "PU"
+    elif pickup_or_dropoff == "Dropoff":
+        pu_do = "DO"
+
+    # 1
+    total_day_df = cdta_df[['borough'] + [col for col in cdta_df.columns if f"{pu_do}_total_trip_count_day" in col]]\
+                    .groupby('borough').sum().T
+    total_day_df.index = [idx.split("_")[-1] for idx in total_day_df.index]
+
+    # 2
+    total_hour_df = cdta_df[['borough'] + [col for col in cdta_df.columns if f"{pu_do}_total_trip_count_hour" in col]]\
+                    .groupby('borough').sum().T
+    total_hour_df.index = [idx.split("_")[-1] for idx in total_hour_df.index]
+
+    # 3
+    total_weekday_df = cdta_df[['borough'] + 
+                              [f'{pu_do}_total_trip_count_Friday',
+                              f'{pu_do}_total_trip_count_Monday',
+                              f'{pu_do}_total_trip_count_Saturday',
+                              f'{pu_do}_total_trip_count_Sunday',
+                              f'{pu_do}_total_trip_count_Thursday',
+                              f'{pu_do}_total_trip_count_Tuesday',
+                              f'{pu_do}_total_trip_count_Wednesday']]\
+                        .groupby('borough').sum().T
+    total_weekday_df.index = [idx.split("_")[-1] for idx in total_weekday_df.index]
+    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    total_weekday_df.index = pd.Categorical(total_weekday_df.index, categories=weekdays, ordered=True)
+    total_weekday_df.sort_index(inplace=True)
+    
+    # 4
+    total_year_month_df = cdta_df[['borough'] +
+                                    [f'{pu_do}_total_trip_count_2022-01',
+                                    f'{pu_do}_total_trip_count_2022-02',
+                                    f'{pu_do}_total_trip_count_2022-03',
+                                    f'{pu_do}_total_trip_count_2022-04',
+                                    f'{pu_do}_total_trip_count_2022-05',
+                                    f'{pu_do}_total_trip_count_2022-06']]\
+                        .groupby('borough').sum().T
+    total_year_month_df.index = [idx.split("_")[-1] for idx in total_year_month_df.index]
+
+    fig, axs = plt.subplots(4, 2, figsize=(20, 15))
+    fig.tight_layout(pad=5)
+    total_day_df.plot(ax=axs[0, 0])
+    axs[0, 0].set_title(f"{pu_do}_total_trip_count_day")
+
+    total_hour_df.plot(ax=axs[1, 0])
+    axs[1, 0].set_title(f"{pu_do}_total_trip_count_hour")
+
+    total_weekday_df.plot(ax=axs[2, 0])
+    axs[2, 0].set_title(f"{pu_do}_total_trip_count_weekday")
+
+    total_year_month_df.plot(ax=axs[3, 0])
+    axs[3, 0].set_title(f"{pu_do}_total_trip_count_year_month")
+    
+    (total_day_df / 6).plot(ax=axs[0, 1])
+    axs[0, 1].set_title(f"{pu_do}_monthly_average_count_day")
+
+    (total_hour_df / 6).plot(ax=axs[1, 1])
+    axs[1, 1].set_title(f"{pu_do}_monthly_average_count_hour")
+
+    (total_weekday_df / 6).plot(ax=axs[2, 1])
+    axs[2, 1].set_title(f"{pu_do}_monthly_average_count_weekday")
+    
+    bar_df = total_year_month_df.mean().sort_values(ascending=False)
+    ax = axs[3, 1]
+    ax.bar(bar_df.index, bar_df.values)
+    for i, rect in enumerate(ax.patches):
+        # Get X and Y placement of label from rect.
+        y_value = rect.get_height()
+        x_value = rect.get_x() + rect.get_width() / 2
+
+        # Number of points between bar and label
+        space = 0
+        # Vertical alignment for positive values
+        va = 'bottom'
+
+        # If value of bar is negative: Place label below bar
+        if y_value < 0:
+            # Invert space to place label below
+            space *= -1
+            # Vertically align label at top
+            va = 'top'
+
+        # Use Y value as label and format number with one decimal place
+        label = "{:.3f}%".format(bar_df.values[i] / bar_df.values.sum())
+
+        # Create annotation
+        ax.annotate(
+            label,                      # Use `label` as label
+            (x_value, y_value),         # Place label at end of the bar
+            xytext=(0, space),          # Vertically shift label by `space`
+            textcoords="offset points", # Interpret `xytext` as offset in points
+            ha='center',                # Horizontally center label
+            va=va)               
+    ax.set_title(f"{pu_do}_monthly_average_trip_count_per_borough");
+
+
+def plot_trips_per_month_interactive(pickup_or_dropoff):
+    if pickup_or_dropoff == "Pickup":
+        pu_do = "PU"
+    elif pickup_or_dropoff == "Dropoff":
+        pu_do = "DO"
+    dfs, year_months = load_cdta_df_per_month(folder_name="data\\cdta_df",
+                        year_month_list = ['2022-01', '2022-02', '2022-03', '2022-04', '2022-05', '2022-06'])
+    plot_trips_per_month(dfs, year_months, pu_do=pu_do)
+
+
 def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
     # 1
     total_day_df = cdta_df[['borough'] + [col for col in cdta_df.columns if f"{pu_do}_total_trip_count_day" in col]]\
@@ -354,7 +467,7 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
     total_weekday_df.sort_index(inplace=True)
     
     if single_month:
-        fig, axs = plt.subplots(3, 2, figsize=(20, 20))
+        fig, axs = plt.subplots(3, 2, figsize=(15, 10))
         total_day_df.plot(ax=axs[0, 0])
         axs[0, 0].set_title(f"total_trip_count_day_{year_month}")
 
@@ -473,7 +586,17 @@ def plot_trips_per_month(dfs, year_months, pu_do):
         if (file_name.endswith(".png")) and (pu_do in file_name):
             file_path = os.path.join(path, file_name)
             images.append(imageio.imread(file_path))
-    imageio.mimsave(path+'\\trip_counts_per_month.gif', images, duration=2)
+    imageio.mimsave(path+f'\\{pu_do}_trip_counts_per_month.gif', images, duration=2)
+    print(f"{pu_do}_trip_counts_per_month.gif saved in {path}.")
+
+
+def plot_on_map_interactive(exclude_manhattan):
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    if exclude_manhattan:
+        cdta_df = cdta_df[cdta_df['borough'] != "Manhattan"]
+    
+    for pu_do in ["PU", "DO"]:
+        plot_on_map(cdta_df, pu_do)
 
 
 def plot_on_map(df, pu_do):
@@ -494,22 +617,35 @@ def plot_on_map(df, pu_do):
         f'{pu_do}_minute_per_mile'
     ]
 
-    fig, axes = plt.subplots(7, 2, figsize=(15,50))
+    # fig, axes = plt.subplots(7, 2, figsize=(15,50))
+    # for i, col in enumerate(cols):
+    #     if i < 7:
+    #         ax = axes[i%7, 0]
+    #     else:
+    #         ax = axes[i%7, 1]
+    fig, axes = plt.subplots(2, 7, figsize=(25, 8.5))
+    axes_idx = []
+    for row_idx in range(2):
+        for col_idx in range(7):
+            axes_idx.append((row_idx, col_idx))
+
     for i, col in enumerate(cols):
-        if i < 7:
-            ax = axes[i%7, 0]
-        else:
-            ax = axes[i%7, 1]
+        ax = axes[axes_idx[i]]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(col)
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("bottom", size="5%", pad=0.5)
+        cax = divider.append_axes("bottom", size="5%", pad=0.2)
         vmin, vmax = df[col].min(), df[col].max()
         df[[col, 'geometry']].plot(
             column=col,
             ax=ax,
             cax=cax,
             legend=True,
-            legend_kwds={'label': col,
-                        'orientation': 'horizontal'},
+            legend_kwds={
+                # 'label': col,
+                'orientation': 'horizontal'
+                },
             vmin=vmin,
             vmax=vmax
         )
@@ -560,3 +696,26 @@ def print_top_table(df, col, top_n=10, excluding_manhattan=False):
                     tablefmt='simple_grid',
                     floatfmt=',.7g'))
     print("----------------------------------------------------------------------------------------------------------")
+
+
+def create_map_with_table(col, top_n):
+    # Get a dataframe to create an interactive plot using geopandas' explore method.
+    nyc_df = gpd.read_file(gpd.datasets.get_path('nybb'))
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    merged_df = pd.merge(nyc_df, cdta_df, on="geometry", how="outer").iloc[5:, 4:]
+
+    m = create_interactive_map(merged_df, col)
+
+    # Print out top 10 CDTAs.
+    print_top_table(merged_df, col, top_n=top_n)
+
+    # Create another map without Manhattan.
+    without_manhattan_df = merged_df[merged_df['borough'] != "Manhattan"]
+    create_interactive_map(without_manhattan_df, col, m=m)
+
+    # Print out top 10 CDTAs, excluding Manhattan.
+    print_top_table(without_manhattan_df, col, top_n=top_n, excluding_manhattan=True)
+
+    folium.LayerControl().add_to(m)
+    m.save('map.html')
+    webbrowser.open('map.html')
