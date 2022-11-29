@@ -719,3 +719,89 @@ def create_map_with_table(col, top_n):
     folium.LayerControl().add_to(m)
     m.save('map.html')
     webbrowser.open('map.html')
+
+
+def get_socio_df(cdta_df):
+    ori_socio_df = pd.read_csv(os.path.dirname(os.getcwd()) + "\\socio\\data\\socioecoomic.csv", index_col=0)
+    socio_df = ori_socio_df.copy()
+
+    socio_df["Community District"] = socio_df["Community District"].apply(lambda x: x.replace(" ", ""))
+    socio_df = socio_df.rename(columns={" Indicator Description": "Indicator Description"})
+
+    relevant_cols = [
+        'Population',
+        'Disabled population',
+        'Foreign-born population',
+        'Population aged 65+',
+        'Median household income (2021$)',
+        'Poverty rate',
+        'Labor force participation rate',
+        'Population aged 25+ without a high school diploma',
+        'Unemployment rate',
+        'Severely rent-burdened households',
+        'Homeownership rate',
+        'Severe crowding rate (% of renter households)',
+        'Population density (1,000 persons per square mile)',
+        'Car-free commute (% of commuters)',
+        'Mean travel time to work (minutes)',
+        'Serious crime rate (per 1,000 residents)']
+
+    socio_df = socio_df[socio_df["Indicator"].isin(relevant_cols)][["Community District", "Indicator", "2019"]]
+    socio_df = socio_df.pivot(index="Community District", columns="Indicator", values="2019").reset_index()
+    socio_df['geometry'] = socio_df['Community District'].map(
+        cdta_df[["CDTA", "geometry"]].set_index("CDTA").to_dict()["geometry"]
+        )
+    socio_df = socio_df.set_geometry("geometry")    
+    # socio_df["geometry"] = socio_df.centroid
+    socio_df[relevant_cols] = socio_df[relevant_cols].applymap(lambda x: float(x.strip('$').strip('%').replace(',', '')))
+    socio_df = socio_df.rename_axis(None, axis=1)
+
+    return socio_df
+
+
+def plot_socio_on_map(df):
+    fig, axes = plt.subplots(4, 4, figsize=(20, 20))
+    axes_idx = []
+    for row_idx in range(4):
+        for col_idx in range(4):
+            axes_idx.append((row_idx, col_idx))
+
+    relevant_cols = [
+        'Population',
+        'Disabled population',
+        'Foreign-born population',
+        'Population aged 65+',
+        'Median household income (2021$)',
+        'Poverty rate',
+        'Labor force participation rate',
+        'Population aged 25+ without a high school diploma',
+        'Unemployment rate',
+        'Severely rent-burdened households',
+        'Homeownership rate',
+        'Severe crowding rate (% of renter households)',
+        'Population density (1,000 persons per square mile)',
+        'Car-free commute (% of commuters)',
+        'Mean travel time to work (minutes)',
+        'Serious crime rate (per 1,000 residents)']
+
+    df = df[relevant_cols + ['geometry']]
+    for i, col in enumerate(relevant_cols):
+        ax = axes[axes_idx[i]]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(col)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("bottom", size="5%", pad=0.2)
+        vmin, vmax = df[col].min(), df[col].max()
+        df[[col, 'geometry']].plot(
+            column=col,
+            ax=ax,
+            cax=cax,
+            legend=True,
+            legend_kwds={
+                # 'label': col,
+                'orientation': 'horizontal'
+                },
+            vmin=vmin,
+            vmax=vmax
+        )
