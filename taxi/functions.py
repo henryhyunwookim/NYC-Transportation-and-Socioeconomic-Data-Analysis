@@ -14,6 +14,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tabulate import tabulate
 import webbrowser
 import folium
+import warnings
+warnings.filterwarnings("ignore")
+import seaborn as sns
 
 
 def load_taxi_trip_data(source_url, folder_name="data"):
@@ -722,13 +725,19 @@ def create_map_with_table(col, top_n):
 
 
 def get_socio_df(cdta_df):
+    """
+    Load socioeconomic data for each community district and create a dataframe out of it
+    so that each socioeconomic indicator for each community district can be plotted on a map.
+    """
     ori_socio_df = pd.read_csv(os.path.dirname(os.getcwd()) + "\\socio\\data\\socioecoomic.csv", index_col=0)
     socio_df = ori_socio_df.copy()
 
     socio_df["Community District"] = socio_df["Community District"].apply(lambda x: x.replace(" ", ""))
     socio_df = socio_df.rename(columns={" Indicator Description": "Indicator Description"})
 
-    relevant_cols = [
+    # Only select the most relevant columns from the dataframe,
+    # and pivot each indicator into a column for each community district.
+    socio_cols = [
         'Population',
         'Disabled population',
         'Foreign-born population',
@@ -745,15 +754,21 @@ def get_socio_df(cdta_df):
         'Car-free commute (% of commuters)',
         'Mean travel time to work (minutes)',
         'Serious crime rate (per 1,000 residents)']
-
-    socio_df = socio_df[socio_df["Indicator"].isin(relevant_cols)][["Community District", "Indicator", "2019"]]
+    socio_df = socio_df[socio_df["Indicator"].isin(socio_cols)][["Community District", "Indicator", "2019"]]
     socio_df = socio_df.pivot(index="Community District", columns="Indicator", values="2019").reset_index()
+
+    # Add borough, geometry, and centroid data for each community district.
+    socio_df["borough"] = socio_df['Community District'].map(
+        cdta_df[["CDTA", "borough"]].set_index("CDTA").to_dict()["borough"]
+        )
     socio_df['geometry'] = socio_df['Community District'].map(
         cdta_df[["CDTA", "geometry"]].set_index("CDTA").to_dict()["geometry"]
         )
     socio_df = socio_df.set_geometry("geometry")    
-    # socio_df["geometry"] = socio_df.centroid
-    socio_df[relevant_cols] = socio_df[relevant_cols].applymap(lambda x: float(x.strip('$').strip('%').replace(',', '')))
+    socio_df["centroid"] = socio_df.centroid
+    
+    # Convert string values into float and remove index name that is not necessary.
+    socio_df[socio_cols] = socio_df[socio_cols].applymap(lambda x: float(x.strip('$').strip('%').replace(',', '')))
     socio_df = socio_df.rename_axis(None, axis=1)
 
     return socio_df
@@ -766,7 +781,7 @@ def plot_socio_on_map(df):
         for col_idx in range(4):
             axes_idx.append((row_idx, col_idx))
 
-    relevant_cols = [
+    socio_cols = [
         'Population',
         'Disabled population',
         'Foreign-born population',
@@ -784,8 +799,8 @@ def plot_socio_on_map(df):
         'Mean travel time to work (minutes)',
         'Serious crime rate (per 1,000 residents)']
 
-    df = df[relevant_cols + ['geometry']]
-    for i, col in enumerate(relevant_cols):
+    df = df[socio_cols + ['geometry']]
+    for i, col in enumerate(socio_cols):
         ax = axes[axes_idx[i]]
         ax.set_xticks([])
         ax.set_yticks([])
@@ -805,3 +820,144 @@ def plot_socio_on_map(df):
             vmin=vmin,
             vmax=vmax
         )
+
+
+def plot_taxi_socio_interactive(taxi_col, socio_col, top_n):
+
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    socio_df = get_socio_df(cdta_df).set_geometry("geometry")
+
+    # Combine the PU and DO columns by averaging the values.
+    print("Combining the PU and DO columns by averaging the values in cdta_df.")
+    taxi_cols = [
+    'total_trip_count', 'PU_minute_per_mile', 'DO_minute_per_mile',
+    'total_passenger_count', 'total_trip_distance (mile)',
+    'total_fare', 'total_congestion_surcharge', 'total_airport_fee', 'total_duration (min)',
+    'average_passenger_count', 'average_trip_distance (mile)', 'average_fare',
+    'average_congestion_surcharge', 'average_airport_fee', 'average_duration (min)']
+
+    socio_cols = [
+            'Population',
+            'Disabled population',
+            'Foreign-born population',
+            'Population aged 65+',
+            'Median household income (2021$)',
+            'Poverty rate',
+            'Labor force participation rate',
+            'Population aged 25+ without a high school diploma',
+            'Unemployment rate',
+            'Severely rent-burdened households',
+            'Homeownership rate',
+            'Severe crowding rate (% of renter households)',
+            'Population density (1,000 persons per square mile)',
+            'Car-free commute (% of commuters)',
+            'Mean travel time to work (minutes)',
+            'Serious crime rate (per 1,000 residents)']
+
+    print("Combining the PU and DO columns, except minute per mile, by averaging the values in cdta_df.")
+    for col in taxi_cols:
+        if "minute_per_mile" not in col:
+            try:
+                cdta_df[col] = (cdta_df["PU_"+col] + cdta_df["DO_"+col]) / 2
+                cdta_df.drop(["PU_"+col, "DO_"+col], axis=1, inplace=True)
+            except KeyError:
+                pass
+
+    fig, ax = plt.subplots(figsize=(8,8))
+    divider = make_axes_locatable(ax)
+    taxi_vmin, taxi_vmax = cdta_df[taxi_col].min(), cdta_df[taxi_col].max()
+    socio_vmin, socio_vmax = socio_df[socio_col].min(), socio_df[socio_col].max()
+
+    cdta_df[['CDTA', 'geometry']].plot(column="CDTA", ax=ax, cax=divider.append_axes("bottom", size="0%", pad=0))
+
+    cdta_df[[taxi_col, 'geometry']].plot(
+        column=taxi_col,
+        ax=ax,
+        cax=divider.append_axes("top", size="5%", pad=0.5),
+        legend=True,
+        legend_kwds={
+            'label': taxi_col,
+            'orientation': 'horizontal'
+            },
+        vmin=taxi_vmin,
+        vmax=taxi_vmax,
+        cmap='Blues'
+    )
+
+    socio_df['centroid'] = socio_df.centroid
+    socio_df = socio_df.set_geometry('centroid')
+    socio_df[[socio_col, 'centroid']].plot(
+        column=socio_col,
+        ax=ax,
+        cax=divider.append_axes("bottom", size="5%", pad=0.5),
+        legend=True,
+        legend_kwds={
+            'label': socio_col,
+            'orientation': 'horizontal'
+            },
+        vmin=socio_vmin,
+        vmax=socio_vmax,
+        cmap='Reds',
+        marker='.',
+        markersize= ((socio_df[socio_col] - socio_df[socio_col].mean()) / socio_vmax) * 2000,
+    )
+
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    # Print out top 10 CDTAs/CDs for taxi_col and socio_col.
+    merged_df = pd.merge(
+        cdta_df.drop("borough", axis=1),
+        socio_df.rename(columns={"Community District": "CDTA"}),
+        on='CDTA',
+        how='right')[taxi_cols + socio_cols + ["CDTA", "CDTA_name", "borough"]]
+    print_top_table(merged_df, taxi_col, top_n=top_n)
+    print_top_table(merged_df, socio_col, top_n=top_n)
+
+
+def create_heatmap():
+
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    socio_df = get_socio_df(cdta_df).set_geometry("geometry")
+
+    taxi_cols = [
+    'total_trip_count', 'PU_minute_per_mile', 'DO_minute_per_mile',
+    'total_passenger_count', 'total_trip_distance (mile)',
+    'total_fare', 'total_congestion_surcharge', 'total_airport_fee', 'total_duration (min)',
+    'average_passenger_count', 'average_trip_distance (mile)', 'average_fare',
+    'average_congestion_surcharge', 'average_airport_fee', 'average_duration (min)']
+
+    print("Combining the PU and DO columns, except minute per mile, by averaging the values in cdta_df.")
+    for col in taxi_cols:
+        if "minute_per_mile" not in col:
+            try:
+                cdta_df[col] = (cdta_df["PU_"+col] + cdta_df["DO_"+col]) / 2
+                cdta_df.drop(["PU_"+col, "DO_"+col], axis=1, inplace=True)
+            except KeyError:
+                pass
+
+    socio_cols = [
+            'Population',
+            'Disabled population',
+            'Foreign-born population',
+            'Population aged 65+',
+            'Median household income (2021$)',
+            'Poverty rate',
+            'Labor force participation rate',
+            'Population aged 25+ without a high school diploma',
+            'Unemployment rate',
+            'Severely rent-burdened households',
+            'Homeownership rate',
+            'Severe crowding rate (% of renter households)',
+            'Population density (1,000 persons per square mile)',
+            'Car-free commute (% of commuters)',
+            'Mean travel time to work (minutes)',
+            'Serious crime rate (per 1,000 residents)']
+
+    merged_df = pd.merge(cdta_df, socio_df.rename(columns={"Community District": "CDTA"}), on='CDTA', how='right')[taxi_cols+socio_cols]
+
+    fig, ax = plt.subplots(figsize=(20,20))
+    sns.heatmap(
+        merged_df.corr(),
+        annot=True
+    )
