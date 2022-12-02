@@ -130,3 +130,6 @@ dmypy.json
 *.xml
 *.db
 *.iml
+
+# test files
+test.*

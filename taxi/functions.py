@@ -1,7 +1,6 @@
 import requests
 import bs4
 from collections import defaultdict
-from tqdm import tqdm
 import os
 import dask.dataframe as dd
 import geopandas as gpd
@@ -12,6 +11,11 @@ import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tabulate import tabulate
+import webbrowser
+import folium
+import warnings
+warnings.filterwarnings("ignore")
+import seaborn as sns
 
 
 def load_taxi_trip_data(source_url, folder_name="data"):
@@ -273,6 +277,11 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="data"
 
 
 def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="data"):
+    """
+    Create a dataframe for taxi trips in each month in Jan-Jun 2022.
+    """
+
+    # Create a folder if not already exists.
     path = os.getcwd() + "\\" + folder_name
     if not os.path.exists(path):
         os.makedirs(path)
@@ -298,6 +307,10 @@ def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_n
 
 
 def load_cdta_df(folder_name="data"):
+    """
+    Load the dataframe created by the get_cdta_df function as a geoDataFrame.
+    """
+
     path = os.getcwd() + "\\" + folder_name
     cdta_df = pd.read_csv(f'{path}/cdta_df.csv', index_col=0)
 
@@ -312,6 +325,10 @@ def load_cdta_df(folder_name="data"):
 
 def load_cdta_df_per_month(folder_name="data",\
     year_month_list = ['2022-01', '2022-02', '2022-03', '2022-04', '2022-05', '2022-06']):
+    """
+    Load the dataframes created by the get_cdta_df_per_month function as geoDataFrames.
+    """
+
     path = os.getcwd() + "\\" + folder_name
 
     dfs = []
@@ -327,7 +344,141 @@ def load_cdta_df_per_month(folder_name="data",\
     return dfs, year_months
 
 
+def plot_total_trips_interactive(pickup_or_dropoff):
+    """
+    Plot interactive line and bar charts based on pickup and dropoff locations.
+    """
+
+    # 0. Load data and set pu_do.
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    if pickup_or_dropoff == "Pickup":
+        pu_do = "PU"
+    elif pickup_or_dropoff == "Dropoff":
+        pu_do = "DO"
+
+    # 1. Create a dataframe for trip count for each day of the month.
+    total_day_df = cdta_df[['borough'] + [col for col in cdta_df.columns if f"{pu_do}_total_trip_count_day" in col]]\
+                    .groupby('borough').sum().T
+    total_day_df.index = [idx.split("_")[-1] for idx in total_day_df.index]
+
+    # 2. Create a dataframe for trip count for each hour of the day.
+    total_hour_df = cdta_df[['borough'] + [col for col in cdta_df.columns if f"{pu_do}_total_trip_count_hour" in col]]\
+                    .groupby('borough').sum().T
+    total_hour_df.index = [idx.split("_")[-1] for idx in total_hour_df.index]
+
+    # 3. Create a dataframe for trip count for each weekday.
+    total_weekday_df = cdta_df[['borough'] + 
+                              [f'{pu_do}_total_trip_count_Friday',
+                              f'{pu_do}_total_trip_count_Monday',
+                              f'{pu_do}_total_trip_count_Saturday',
+                              f'{pu_do}_total_trip_count_Sunday',
+                              f'{pu_do}_total_trip_count_Thursday',
+                              f'{pu_do}_total_trip_count_Tuesday',
+                              f'{pu_do}_total_trip_count_Wednesday']]\
+                        .groupby('borough').sum().T
+    total_weekday_df.index = [idx.split("_")[-1] for idx in total_weekday_df.index]
+    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    total_weekday_df.index = pd.Categorical(total_weekday_df.index, categories=weekdays, ordered=True)
+    total_weekday_df.sort_index(inplace=True)
+    
+    # 4. Create a dataframe for trip count for each month of the year; Jan-Jun only.
+    total_year_month_df = cdta_df[['borough'] +
+                                    [f'{pu_do}_total_trip_count_2022-01',
+                                    f'{pu_do}_total_trip_count_2022-02',
+                                    f'{pu_do}_total_trip_count_2022-03',
+                                    f'{pu_do}_total_trip_count_2022-04',
+                                    f'{pu_do}_total_trip_count_2022-05',
+                                    f'{pu_do}_total_trip_count_2022-06']]\
+                        .groupby('borough').sum().T
+    total_year_month_df.index = [idx.split("_")[-1] for idx in total_year_month_df.index]
+
+    # 5. Using the dataframes created above,
+    #   create plots for total and average trip counts based on different criteria.
+    fig, axs = plt.subplots(4, 2, figsize=(20, 15))
+    fig.tight_layout(pad=5)
+    total_day_df.plot(ax=axs[0, 0])
+    axs[0, 0].set_title(f"{pu_do}_total_trip_count_day")
+
+    total_hour_df.plot(ax=axs[1, 0])
+    axs[1, 0].set_title(f"{pu_do}_total_trip_count_hour")
+
+    total_weekday_df.plot(ax=axs[2, 0])
+    axs[2, 0].set_title(f"{pu_do}_total_trip_count_weekday")
+
+    total_year_month_df.plot(ax=axs[3, 0])
+    axs[3, 0].set_title(f"{pu_do}_total_trip_count_year_month")
+    
+    (total_day_df / 6).plot(ax=axs[0, 1])
+    axs[0, 1].set_title(f"{pu_do}_monthly_average_count_day")
+
+    (total_hour_df / 6).plot(ax=axs[1, 1])
+    axs[1, 1].set_title(f"{pu_do}_monthly_average_count_hour")
+
+    (total_weekday_df / 6).plot(ax=axs[2, 1])
+    axs[2, 1].set_title(f"{pu_do}_monthly_average_count_weekday")
+    
+    # 6. Create a bar chart for trip count for each borough.
+    bar_df = total_year_month_df.mean().sort_values(ascending=False)
+    ax = axs[3, 1]
+    ax.bar(bar_df.index, bar_df.values)
+    for i, rect in enumerate(ax.patches):
+        # Get X and Y placement of label from rect.
+        y_value = rect.get_height()
+        x_value = rect.get_x() + rect.get_width() / 2
+
+        # Number of points between bar and label
+        space = 0
+        # Vertical alignment for positive values
+        va = 'bottom'
+
+        # If value of bar is negative: Place label below bar
+        if y_value < 0:
+            # Invert space to place label below
+            space *= -1
+            # Vertically align label at top
+            va = 'top'
+
+        # Use Y value as label and format number with one decimal place
+        label = "{:.3f}%".format(bar_df.values[i] / bar_df.values.sum())
+
+        # Create annotation
+        ax.annotate(
+            label,                      # Use 'label' as label
+            (x_value, y_value),         # Place label at end of the bar
+            xytext=(0, space),          # Vertically shift label by 'space'
+            textcoords="offset points", # Interpret 'xytext' as offset in points
+            ha='center',                # Horizontally center label
+            va=va)               
+    ax.set_title(f"{pu_do}_monthly_average_trip_count_per_borough")
+    plt.suptitle(
+        "Total and monthly taxi trip counts in Jan-Jun 2022 in NYC",
+        fontsize="xx-large",
+        fontweight="demibold",
+        y=1
+        );
+
+
+def plot_trips_per_month_interactive(pickup_or_dropoff):
+    """
+    Create plots similar to what the plot_total_trips_interactive function produces,
+    but for each month in 2022.
+    """
+
+    if pickup_or_dropoff == "Pickup":
+        pu_do = "PU"
+    elif pickup_or_dropoff == "Dropoff":
+        pu_do = "DO"
+    dfs, year_months = load_cdta_df_per_month(folder_name="data\\cdta_df",
+                        year_month_list = ['2022-01', '2022-02', '2022-03', '2022-04', '2022-05', '2022-06'])
+    plot_trips_per_month(dfs, year_months, pu_do=pu_do)
+
+
 def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
+    """
+    This is a helper function for the plot_trips_per_month function.
+    The plots created would be similar to what plot_total_trips_interactive creates.
+    """
+
     # 1
     total_day_df = cdta_df[['borough'] + [col for col in cdta_df.columns if f"{pu_do}_total_trip_count_day" in col]]\
                     .groupby('borough').sum().T
@@ -354,7 +505,7 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
     total_weekday_df.sort_index(inplace=True)
     
     if single_month:
-        fig, axs = plt.subplots(3, 2, figsize=(20, 20))
+        fig, axs = plt.subplots(3, 2, figsize=(15, 10))
         total_day_df.plot(ax=axs[0, 0])
         axs[0, 0].set_title(f"total_trip_count_day_{year_month}")
 
@@ -432,13 +583,23 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
 
             # Create annotation
             ax.annotate(
-                label,                      # Use `label` as label
+                label,                      # Use 'label' as label
                 (x_value, y_value),         # Place label at end of the bar
-                xytext=(0, space),          # Vertically shift label by `space`
-                textcoords="offset points", # Interpret `xytext` as offset in points
+                xytext=(0, space),          # Vertically shift label by 'space'
+                textcoords="offset points", # Interpret 'xytext' as offset in points
                 ha='center',                # Horizontally center label
                 va=va)               
-        ax.set_title(f"{pu_do}_monthly_average_trip_count_per_borough");       
+        ax.set_title(f"{pu_do}_monthly_average_trip_count_per_borough");
+
+    pickup_or_dropoff = "pickup"
+    if pu_do == "DO":
+        pickup_or_dropoff = "dropoff"
+    plt.suptitle(
+        f"Total and monthly taxi trip counts based on {pickup_or_dropoff} in each month",
+        fontsize="xx-large",
+        fontweight="demibold",
+        y=0.96
+        )       
         
     if year_month == None:
         year_month = "Jan-Jun 2022"
@@ -455,6 +616,10 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
 
 
 def plot_trips_per_month(dfs, year_months, pu_do):
+    """
+    This is a helper function for the plot_trips_per_month_interactive function.
+    """
+
     if pu_do == "PU":
         dfs = dfs[:int(len(dfs)/2)]
         year_months = year_months[:int(len(year_months)/2)]
@@ -465,7 +630,7 @@ def plot_trips_per_month(dfs, year_months, pu_do):
     for df, year_month in zip(dfs, year_months):
         plot_total_trips(df, pu_do=pu_do, single_month=True, year_month=year_month, save_png=True)
         
-    # Create GIF using PNG files
+    # Create GIF using PNG files.
     print("Getting a GIF file using the PNG files.")
     images = []
     path = os.getcwd() + "\\" + "data\\png"
@@ -473,10 +638,28 @@ def plot_trips_per_month(dfs, year_months, pu_do):
         if (file_name.endswith(".png")) and (pu_do in file_name):
             file_path = os.path.join(path, file_name)
             images.append(imageio.imread(file_path))
-    imageio.mimsave(path+'\\trip_counts_per_month.gif', images, duration=2)
+    imageio.mimsave(path+f'\\{pu_do}_trip_counts_per_month.gif', images, duration=2)
+    print(f"{pu_do}_trip_counts_per_month.gif saved in {path}.")
 
 
-def plot_on_map(df, pu_do):
+def plot_on_map_interactive(exclude_manhattan):
+    """
+    Create a small multiple where each choropleth visualizes a taxi trip variable/stat on a map of NYC.
+    """
+
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    if exclude_manhattan:
+        cdta_df = cdta_df[cdta_df['borough'] != "Manhattan"]
+    
+    for pu_do in ["PU", "DO"]:
+        plot_on_map(cdta_df, pu_do, exclude_manhattan)
+
+
+def plot_on_map(df, pu_do, exclude_manhattan):
+    """
+    This is a helper function for the plot_on_map_interactive function.
+    """
+
     cols = [
         f'{pu_do}_total_passenger_count',
         f'{pu_do}_total_fare',
@@ -494,58 +677,53 @@ def plot_on_map(df, pu_do):
         f'{pu_do}_minute_per_mile'
     ]
 
-    fig, axes = plt.subplots(7, 2, figsize=(15,50))
+    fig, axes = plt.subplots(2, 7, figsize=(25, 8.5))
+    axes_idx = []
+    for row_idx in range(2):
+        for col_idx in range(7):
+            axes_idx.append((row_idx, col_idx))
+
     for i, col in enumerate(cols):
-        if i < 7:
-            ax = axes[i%7, 0]
-        else:
-            ax = axes[i%7, 1]
+        ax = axes[axes_idx[i]]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(col)
         divider = make_axes_locatable(ax)
-        cax = divider.append_axes("bottom", size="5%", pad=0.5)
+        cax = divider.append_axes("bottom", size="5%", pad=0.2)
         vmin, vmax = df[col].min(), df[col].max()
         df[[col, 'geometry']].plot(
             column=col,
             ax=ax,
             cax=cax,
             legend=True,
-            legend_kwds={'label': col,
-                        'orientation': 'horizontal'},
+            legend_kwds={
+                # 'label': col,
+                'orientation': 'horizontal'
+                },
             vmin=vmin,
             vmax=vmax
         )
 
-
-def create_interactive_map(df, col, m=None):
-    df = df[['CDTA', 'CDTA_name', 'borough', col, 'geometry']]
-
-    if m == None:
-        return df.explore(
-            column=col,
-            style_kwds=dict(color="black", weight=1), # use black outline
-            legend_kwds=dict(colorbar=False, fmt="{:,}"),
-            tooltip_kwds=dict(localize=True),
-            tiles="CartoDB positron",
-            scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
-            cmap='Reds',
-            k=5, # bins
-            name="All boroughs"
-        )
-    else:
-        return df.explore(
-            column=col,
-            style_kwds=dict(color="black", weight=1), # use black outline
-            legend_kwds=dict(colorbar=False, fmt="{:,}", caption=col+' without Manhattan'),
-            tooltip_kwds=dict(localize=True),
-            tiles="CartoDB positron",
-            scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
-            cmap='Reds',
-            k=5, # bins
-            name="All boroughs except Manhattan",
-            m=m
-        )
+    pickup_or_dropoff = "pickup"
+    if pu_do == "DO":
+        pickup_or_dropoff = "dropoff"
+    title = f"Taxi trips across different community districts based on {pickup_or_dropoff} locations"
+    if exclude_manhattan:
+        title = title + ", excluding Manhattan"
+    plt.suptitle(
+        title,
+        fontsize="xx-large",
+        fontweight="demibold",
+        y=0.94
+        )  
 
 
 def print_top_table(df, col, top_n=10, excluding_manhattan=False):
+    """
+    This is a helper function for the plot_taxi_socio_interactive function.
+    It outputs top N community districts (or CDTAs) in a neat tabular format.
+    """
+
     top_cdta_df = df[['CDTA', 'CDTA_name', 'borough', col]].sort_values(col, ascending=False)[:top_n].reset_index(drop=True)
     top_cdta_df["Rank"] = [idx+1 for idx in top_cdta_df.index]
     top_cdta_df = top_cdta_df[["Rank", "borough", "CDTA", "CDTA_name", col]]
@@ -560,3 +738,360 @@ def print_top_table(df, col, top_n=10, excluding_manhattan=False):
                     tablefmt='simple_grid',
                     floatfmt=',.7g'))
     print("----------------------------------------------------------------------------------------------------------")
+
+
+def get_socio_df(cdta_df):
+    """
+    Load socioeconomic data for each community district and create a dataframe out of it
+    so that each socioeconomic indicator for each community district can be plotted on a map.
+    """
+    ori_socio_df = pd.read_csv(os.path.dirname(os.getcwd()) + "\\socio\\data\\socioecoomic.csv", index_col=0)
+    socio_df = ori_socio_df.copy()
+
+    socio_df["Community District"] = socio_df["Community District"].apply(lambda x: x.replace(" ", ""))
+    socio_df = socio_df.rename(columns={" Indicator Description": "Indicator Description"})
+
+    # Only select the most relevant columns from the dataframe,
+    # and pivot each indicator into a column for each community district.
+    socio_cols = [
+        'Population',
+        'Disabled population',
+        'Foreign-born population',
+        'Population aged 65+',
+        'Median household income (2021$)',
+        'Poverty rate',
+        'Labor force participation rate',
+        'Population aged 25+ without a high school diploma',
+        'Unemployment rate',
+        'Severely rent-burdened households',
+        'Homeownership rate',
+        'Severe crowding rate (% of renter households)',
+        'Population density (1,000 persons per square mile)',
+        'Car-free commute (% of commuters)',
+        'Mean travel time to work (minutes)',
+        'Serious crime rate (per 1,000 residents)']
+    socio_df = socio_df[socio_df["Indicator"].isin(socio_cols)][["Community District", "Indicator", "2019"]]
+    socio_df = socio_df.pivot(index="Community District", columns="Indicator", values="2019").reset_index()
+
+    # Add borough, geometry, and centroid data for each community district.
+    socio_df["borough"] = socio_df['Community District'].map(
+        cdta_df[["CDTA", "borough"]].set_index("CDTA").to_dict()["borough"]
+        )
+    socio_df['geometry'] = socio_df['Community District'].map(
+        cdta_df[["CDTA", "geometry"]].set_index("CDTA").to_dict()["geometry"]
+        )
+    socio_df = socio_df.set_geometry("geometry")    
+    socio_df["centroid"] = socio_df.centroid
+    
+    # Convert string values into float and remove index name that is not necessary.
+    socio_df[socio_cols] = socio_df[socio_cols].applymap(lambda x: float(x.strip('$').strip('%').replace(',', '')))
+    socio_df = socio_df.rename_axis(None, axis=1)
+
+    return socio_df
+
+
+def plot_socio_on_map():
+    """
+    Similar to the plot_on_map_interactive function, it creates a small multiple where
+    each choropleth visualizes a socioeconomic variable/stat on a map of NYC.
+    """
+
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    socio_df = get_socio_df(cdta_df).set_geometry("geometry")
+
+    fig, axes = plt.subplots(4, 4, figsize=(20, 20))
+    axes_idx = []
+    for row_idx in range(4):
+        for col_idx in range(4):
+            axes_idx.append((row_idx, col_idx))
+
+    socio_cols = [
+        'Population',
+        'Disabled population',
+        'Foreign-born population',
+        'Population aged 65+',
+        'Median household income (2021$)',
+        'Poverty rate',
+        'Labor force participation rate',
+        'Population aged 25+ without a high school diploma',
+        'Unemployment rate',
+        'Severely rent-burdened households',
+        'Homeownership rate',
+        'Severe crowding rate (% of renter households)',
+        'Population density (1,000 persons per square mile)',
+        'Car-free commute (% of commuters)',
+        'Mean travel time to work (minutes)',
+        'Serious crime rate (per 1,000 residents)']
+
+    socio_df = socio_df[socio_cols + ['geometry']]
+    for i, col in enumerate(socio_cols):
+        ax = axes[axes_idx[i]]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(col)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("bottom", size="5%", pad=0.2)
+        vmin, vmax = socio_df[col].min(), socio_df[col].max()
+        socio_df[[col, 'geometry']].plot(
+            column=col,
+            ax=ax,
+            cax=cax,
+            legend=True,
+            legend_kwds={
+                # 'label': col,
+                'orientation': 'horizontal'
+                },
+            vmin=vmin,
+            vmax=vmax
+        )
+
+
+def plot_taxi_socio_interactive(taxi_col, socio_col, top_n):
+    """
+    Plot a taxi trip variable and a socioeconomic variable on the same map,
+    with details about top N community districts (or CDTAs) in tables.
+    """
+
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    socio_df = get_socio_df(cdta_df).set_geometry("geometry")
+
+    # Combine the PU and DO columns by averaging the values.
+    print("Combining the PU and DO columns by averaging the values in cdta_df.")
+    taxi_cols = [
+    'total_trip_count', 'PU_minute_per_mile', 'DO_minute_per_mile',
+    'total_passenger_count', 'total_trip_distance (mile)',
+    'total_fare', 'total_congestion_surcharge', 'total_airport_fee', 'total_duration (min)',
+    'average_passenger_count', 'average_trip_distance (mile)', 'average_fare',
+    'average_congestion_surcharge', 'average_airport_fee', 'average_duration (min)']
+
+    socio_cols = [
+            'Population',
+            'Disabled population',
+            'Foreign-born population',
+            'Population aged 65+',
+            'Median household income (2021$)',
+            'Poverty rate',
+            'Labor force participation rate',
+            'Population aged 25+ without a high school diploma',
+            'Unemployment rate',
+            'Severely rent-burdened households',
+            'Homeownership rate',
+            'Severe crowding rate (% of renter households)',
+            'Population density (1,000 persons per square mile)',
+            'Car-free commute (% of commuters)',
+            'Mean travel time to work (minutes)',
+            'Serious crime rate (per 1,000 residents)']
+
+    print("Combining the PU and DO columns, except minute per mile, by averaging the values in cdta_df.")
+    for col in taxi_cols:
+        if "minute_per_mile" not in col:
+            try:
+                cdta_df[col] = (cdta_df["PU_"+col] + cdta_df["DO_"+col]) / 2
+                cdta_df.drop(["PU_"+col, "DO_"+col], axis=1, inplace=True)
+            except KeyError:
+                pass
+
+    fig, ax = plt.subplots(figsize=(8,8))
+    divider = make_axes_locatable(ax)
+    taxi_vmin, taxi_vmax = cdta_df[taxi_col].min(), cdta_df[taxi_col].max()
+    socio_vmin, socio_vmax = socio_df[socio_col].min(), socio_df[socio_col].max()
+
+    cdta_df[['CDTA', 'geometry']].plot(column="CDTA", ax=ax, cax=divider.append_axes("bottom", size="0%", pad=0))
+
+    cdta_df[[taxi_col, 'geometry']].plot(
+        column=taxi_col,
+        ax=ax,
+        cax=divider.append_axes("top", size="5%", pad=0.5),
+        legend=True,
+        legend_kwds={
+            'label': taxi_col,
+            'orientation': 'horizontal'
+            },
+        vmin=taxi_vmin,
+        vmax=taxi_vmax,
+        cmap='Blues'
+    )
+
+    socio_df['centroid'] = socio_df.centroid
+    socio_df = socio_df.set_geometry('centroid')
+    socio_df[[socio_col, 'centroid']].plot(
+        column=socio_col,
+        ax=ax,
+        cax=divider.append_axes("bottom", size="5%", pad=0.5),
+        legend=True,
+        legend_kwds={
+            'label': socio_col,
+            'orientation': 'horizontal'
+            },
+        vmin=socio_vmin,
+        vmax=socio_vmax,
+        cmap='Reds',
+        marker='.',
+        markersize= ((socio_df[socio_col] - socio_df[socio_col].mean()) / socio_vmax) * 2000,
+    )
+
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    # Print out top 10 CDTAs/CDs for taxi_col and socio_col.
+    merged_df = pd.merge(
+        cdta_df.drop("borough", axis=1),
+        socio_df.rename(columns={"Community District": "CDTA"}),
+        on='CDTA',
+        how='right')[taxi_cols + socio_cols + ["CDTA", "CDTA_name", "borough"]]
+    print_top_table(merged_df, taxi_col, top_n=top_n)
+    print_top_table(merged_df, socio_col, top_n=top_n)
+
+
+def create_heatmap():
+    """
+    Create a heatmap to see how taxi trips and socioeconomic statistics are or are not correlated.
+    """
+
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    socio_df = get_socio_df(cdta_df).set_geometry("geometry")
+
+    taxi_cols = [
+    'total_trip_count', 'PU_minute_per_mile', 'DO_minute_per_mile',
+    'total_passenger_count', 'total_trip_distance (mile)',
+    'total_fare', 'total_congestion_surcharge', 'total_airport_fee', 'total_duration (min)',
+    'average_passenger_count', 'average_trip_distance (mile)', 'average_fare',
+    'average_congestion_surcharge', 'average_airport_fee', 'average_duration (min)']
+
+    print("Combining the PU and DO columns, except minute per mile, by averaging the values in cdta_df.")
+    for col in taxi_cols:
+        if "minute_per_mile" not in col:
+            try:
+                cdta_df[col] = (cdta_df["PU_"+col] + cdta_df["DO_"+col]) / 2
+                cdta_df.drop(["PU_"+col, "DO_"+col], axis=1, inplace=True)
+            except KeyError:
+                pass
+
+    socio_cols = [
+            'Population',
+            'Disabled population',
+            'Foreign-born population',
+            'Population aged 65+',
+            'Median household income (2021$)',
+            'Poverty rate',
+            'Labor force participation rate',
+            'Population aged 25+ without a high school diploma',
+            'Unemployment rate',
+            'Severely rent-burdened households',
+            'Homeownership rate',
+            'Severe crowding rate (% of renter households)',
+            'Population density (1,000 persons per square mile)',
+            'Car-free commute (% of commuters)',
+            'Mean travel time to work (minutes)',
+            'Serious crime rate (per 1,000 residents)']
+
+    merged_df = pd.merge(cdta_df, socio_df.rename(columns={"Community District": "CDTA"}), on='CDTA', how='right')[taxi_cols+socio_cols]
+
+    fig, ax = plt.subplots(figsize=(20,20))
+    sns.heatmap(
+        merged_df.corr(),
+        annot=True
+    )
+
+
+def create_interactive_taxi_socio(taxi_col, socio_col):
+    """
+    Interactively create a choropleth in HTML
+    where one of the taxi trip variables and one of the socioeconomic variables are plotted on the same map
+    to visualize how they are or are not related in each of the community districts and CDTAs.
+    """
+
+    taxi_cols = [
+    'total_trip_count', 'PU_minute_per_mile', 'DO_minute_per_mile',
+    'total_passenger_count', 'total_trip_distance (mile)',
+    'total_fare', 'total_congestion_surcharge', 'total_airport_fee', 'total_duration (min)',
+    'average_passenger_count', 'average_trip_distance (mile)', 'average_fare',
+    'average_congestion_surcharge', 'average_airport_fee', 'average_duration (min)']
+
+    socio_cols = [
+            'Population',
+            'Disabled population',
+            'Foreign-born population',
+            'Population aged 65+',
+            'Median household income (2021$)',
+            'Poverty rate',
+            'Labor force participation rate',
+            'Population aged 25+ without a high school diploma',
+            'Unemployment rate',
+            'Severely rent-burdened households',
+            'Homeownership rate',
+            'Severe crowding rate (% of renter households)',
+            'Population density (1,000 persons per square mile)',
+            'Car-free commute (% of commuters)',
+            'Mean travel time to work (minutes)',
+            'Serious crime rate (per 1,000 residents)']
+
+    # Load and merge datasets.            
+    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    socio_df = get_socio_df(cdta_df).set_geometry("geometry")
+    nyc_df = gpd.read_file(gpd.datasets.get_path('nybb'))
+    
+    print("Combining the PU and DO columns, except minute per mile, by averaging the values in cdta_df.")
+    for col in taxi_cols:
+        if "minute_per_mile" not in col:
+            try:
+                cdta_df[col] = (cdta_df["PU_"+col] + cdta_df["DO_"+col]) / 2
+                cdta_df.drop(["PU_"+col, "DO_"+col], axis=1, inplace=True)
+            except KeyError:
+                pass
+            
+    socio_df = pd.merge(nyc_df, socio_df, on="geometry", how="outer").iloc[5:, 4:]
+    taxi_df = pd.merge(nyc_df, cdta_df, on="geometry", how="outer").iloc[5:, 4:]
+    merged_df = pd.merge(
+        taxi_df.drop(["borough", "geometry"], axis=1),
+        socio_df.rename(columns={"Community District": "CDTA"}),
+        on='CDTA',
+        how='right')[taxi_cols + socio_cols + ["CDTA", "CDTA_name", "borough", "geometry", "centroid"]].set_geometry("geometry")
+
+    # Add rank columns based on taxi_col and socio_col.
+    merged_df = merged_df.sort_values(taxi_col, ascending=False).reset_index(drop=True)
+    merged_df["Rank: " + taxi_col] = [idx+1 for idx in merged_df.index]
+
+    merged_df = merged_df.sort_values(socio_col, ascending=False).reset_index(drop=True)
+    merged_df["Rank: " + socio_col] = [idx+1 for idx in merged_df.index]
+
+    # Create a map for taxi_col.
+    m = merged_df[["CDTA", "CDTA_name", "borough",
+                    taxi_col, "Rank: " + taxi_col,
+                    socio_col, "Rank: " + socio_col,
+                    "geometry"]].explore(
+        column=taxi_col,
+        style_kwds=dict(color="black", weight=1), # use black outline
+        legend_kwds=dict(colorbar=False, fmt="{:,}"),
+        tooltip_kwds=dict(localize=True),
+        tiles="CartoDB positron",
+        scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
+        cmap='Reds',
+        k=5, # bins
+        name=taxi_col,
+    )
+
+    # Create a map for socio_col.
+    merged_df["centroid"] = merged_df.geometry.centroid
+    merged_df = merged_df.set_geometry("centroid")
+    merged_df[["CDTA", "CDTA_name", "borough",
+                taxi_col, "Rank: " + taxi_col,
+                socio_col, "Rank: " + socio_col,
+                "centroid"]].explore(
+                column=socio_col,
+                style_kwds=dict(color="black", weight=1), # use black outline
+                legend_kwds=dict(colorbar=False, fmt="{:,}"),
+                tooltip_kwds=dict(localize=True),
+                tiles="CartoDB positron",
+                scheme="naturalbreaks",  # use mapclassify's natural breaks scheme
+                cmap='Blues',
+                k=5, # bins
+                name=socio_col,
+                m=m,
+                marker_type="circle",
+                marker_kwds=dict(fill=True, radius=500)
+            )
+    
+    folium.LayerControl().add_to(m)
+    m.save('taxi_socio_map.html')
+    webbrowser.open('taxi_socio_map.html')
