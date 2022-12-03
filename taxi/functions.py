@@ -727,7 +727,7 @@ def print_top_table(df, col, top_n=10, excluding_manhattan=False):
     top_cdta_df = df[['CDTA', 'CDTA_name', 'borough', col]].sort_values(col, ascending=False)[:top_n].reset_index(drop=True)
     top_cdta_df["Rank"] = [idx+1 for idx in top_cdta_df.index]
     top_cdta_df = top_cdta_df[["Rank", "borough", "CDTA", "CDTA_name", col]]
-    top_cdta_df = top_cdta_df.rename(columns={"borough": "Borough"})
+    top_cdta_df = top_cdta_df.rename(columns={"borough": "Borough"}).fillna("Not available")
     if excluding_manhattan:
         print(f"\t<< Top {top_n} CDTAs based on {col}, excluding Manhattan >>")
     else:
@@ -810,17 +810,20 @@ def plot_socio_on_map():
         'Disabled population',
         'Foreign-born population',
         'Population aged 65+',
-        'Median household income (2021$)',
-        'Poverty rate',
-        'Labor force participation rate',
+        
         'Population aged 25+ without a high school diploma',
         'Unemployment rate',
+        'Poverty rate',
         'Severely rent-burdened households',
-        'Homeownership rate',
+        
+        'Median household income (2021$)',
+        'Labor force participation rate',
         'Severe crowding rate (% of renter households)',
-        'Population density (1,000 persons per square mile)',
+        'Homeownership rate',
+        
         'Car-free commute (% of commuters)',
         'Mean travel time to work (minutes)',
+        'Population density (1,000 persons per square mile)',
         'Serious crime rate (per 1,000 residents)']
 
     socio_df = socio_df[socio_cols + ['geometry']]
@@ -844,6 +847,12 @@ def plot_socio_on_map():
             vmin=vmin,
             vmax=vmax
         )
+    plt.suptitle(
+        "Socioeconomic indicators across different community districts",
+        fontsize="xx-large",
+        fontweight="demibold",
+        y=0.91
+        );
 
 
 def plot_taxi_socio_interactive(taxi_col, socio_col, top_n):
@@ -935,15 +944,15 @@ def plot_taxi_socio_interactive(taxi_col, socio_col, top_n):
 
     # Print out top 10 CDTAs/CDs for taxi_col and socio_col.
     merged_df = pd.merge(
-        cdta_df.drop("borough", axis=1),
-        socio_df.rename(columns={"Community District": "CDTA"}),
+        cdta_df,
+        socio_df.rename(columns={"Community District": "CDTA"}).drop("borough", axis=1),
         on='CDTA',
-        how='right')[taxi_cols + socio_cols + ["CDTA", "CDTA_name", "borough"]]
+        how='outer')[taxi_cols + socio_cols + ["CDTA", "CDTA_name", "borough"]]
     print_top_table(merged_df, taxi_col, top_n=top_n)
     print_top_table(merged_df, socio_col, top_n=top_n)
 
 
-def create_heatmap():
+def create_heatmap(variable, top_n, show_highly_correlated_varaibles):
     """
     Create a heatmap to see how taxi trips and socioeconomic statistics are or are not correlated.
     """
@@ -992,6 +1001,44 @@ def create_heatmap():
         merged_df.corr(),
         annot=True
     )
+
+    # Create a dataframe with columns with the highest absolute correlation coefficients.
+    top_df = merged_df.corr()
+    absolute_corr_col = "abs_"+variable
+    top_df[absolute_corr_col] = top_df[variable].apply(lambda x: abs(x))
+
+    if show_highly_correlated_varaibles:
+        top_corr = {}
+        for column in top_df.columns:
+            if "abs_" not in column:
+                temp_df = top_df[[column]]
+                temp_df["abs_corr"] = top_df[column].apply(lambda x: abs(x))
+                temp_df = temp_df[
+                    (temp_df["abs_corr"] > 0.7) & (temp_df["abs_corr"] < 1)
+                    ][column].reset_index().rename(columns={"index": "Correlated variable"})
+                if temp_df.dropna().shape[0] > 0:
+                    for idx, row in temp_df.iterrows():
+                        if  (column + ", " + row["Correlated variable"] not in top_corr.keys()) and\
+                            (row["Correlated variable"] + ", " + column not in top_corr.keys()):
+                            top_corr[column + ", " + row["Correlated variable"]] = row[column]
+        pd.set_option("display.max_rows", None)
+        pd.set_option("display.max_colwidth", None)
+        print("\n* All pairs of variables with absolute correlation coefficients > 0.7:\n")
+        print(pd.DataFrame(data = top_corr.values(), index = top_corr.keys())\
+            .rename(columns={0: "Correlation coefficient"})\
+                .sort_values("Correlation coefficient", key=lambda x: abs(x), ascending=False))
+
+    # Sort by absolute correlation coefficients and choose top n variables, excluding the variable itself.
+    top_df = top_df.sort_values("abs_"+variable, ascending=False)[1:top_n+1].reset_index()
+    top_df["Rank"] = top_df.index + 1
+
+    # Print out the dataframe in a neat tabular format.
+    print("\n" + f"\t<<Correlations with {variable}>>" + "\n")
+    print(tabulate(top_df[["Rank", "index", variable]],
+                    headers= ["Rank", "Correlated variable", "Correlation coefficient"],
+                    showindex=False,
+                    tablefmt='simple_grid',
+                    floatfmt=',.7g'))
 
 
 def create_interactive_taxi_socio(taxi_col, socio_col):
@@ -1043,10 +1090,11 @@ def create_interactive_taxi_socio(taxi_col, socio_col):
     socio_df = pd.merge(nyc_df, socio_df, on="geometry", how="outer").iloc[5:, 4:]
     taxi_df = pd.merge(nyc_df, cdta_df, on="geometry", how="outer").iloc[5:, 4:]
     merged_df = pd.merge(
-        taxi_df.drop(["borough", "geometry"], axis=1),
-        socio_df.rename(columns={"Community District": "CDTA"}),
+        taxi_df,
+        socio_df.rename(columns={"Community District": "CDTA"}).drop(["borough", "geometry"], axis=1),
         on='CDTA',
-        how='right')[taxi_cols + socio_cols + ["CDTA", "CDTA_name", "borough", "geometry", "centroid"]].set_geometry("geometry")
+        how='outer')[taxi_cols + socio_cols + ["CDTA", "CDTA_name", "borough", "geometry", "centroid"]]\
+            .set_geometry("geometry")
 
     # Add rank columns based on taxi_col and socio_col.
     merged_df = merged_df.sort_values(taxi_col, ascending=False).reset_index(drop=True)
@@ -1054,7 +1102,9 @@ def create_interactive_taxi_socio(taxi_col, socio_col):
 
     merged_df = merged_df.sort_values(socio_col, ascending=False).reset_index(drop=True)
     merged_df["Rank: " + socio_col] = [idx+1 for idx in merged_df.index]
-
+    
+    # merged_df[socio_cols] = merged_df[socio_cols].fillna("Not available")
+    
     # Create a map for taxi_col.
     m = merged_df[["CDTA", "CDTA_name", "borough",
                     taxi_col, "Rank: " + taxi_col,
