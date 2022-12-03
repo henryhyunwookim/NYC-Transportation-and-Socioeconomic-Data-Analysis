@@ -12,4 +12,4 @@ The project primarily consists of three sets of analyses as follows:<br>
 3) Analyses on socioeconomic data, sourced from <a href="https://furmancenter.org/">the NYU Furman Center</a><br>
 </ul>
 Each set of analyses can be found in the Jupyter Notebooks (i.e. .ipynb files) in the respective folder in this repository (i.e. "taxi", "subway", and "socio").<br>
-Required Python libraries and other requirements are stated in the requirements.txt file and the raw and processed data files are stored in the "data" folder within the respective folder so that the analyses can be replicated.<br>
+Required Python libraries and other requirements are stated in the requirements.txt file and the raw and processed data files are stored in the "data" folder under the respective folder so that the analyses can be replicated.<br>
