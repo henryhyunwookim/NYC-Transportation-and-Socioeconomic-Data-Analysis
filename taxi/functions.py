@@ -397,25 +397,25 @@ def plot_total_trips_interactive(pickup_or_dropoff):
     fig, axs = plt.subplots(4, 2, figsize=(20, 15))
     fig.tight_layout(pad=5)
     total_day_df.plot(ax=axs[0, 0])
-    axs[0, 0].set_title(f"{pu_do}_total_trip_count_day")
+    axs[0, 0].set_title(f"0-0. {pu_do}_total_trip_count_day")
 
     total_hour_df.plot(ax=axs[1, 0])
-    axs[1, 0].set_title(f"{pu_do}_total_trip_count_hour")
+    axs[1, 0].set_title(f"1-0. {pu_do}_total_trip_count_hour")
 
     total_weekday_df.plot(ax=axs[2, 0])
-    axs[2, 0].set_title(f"{pu_do}_total_trip_count_weekday")
+    axs[2, 0].set_title(f"2-0. {pu_do}_total_trip_count_weekday")
 
     total_year_month_df.plot(ax=axs[3, 0])
-    axs[3, 0].set_title(f"{pu_do}_total_trip_count_year_month")
+    axs[3, 0].set_title(f"3-0. {pu_do}_total_trip_count_year_month")
     
     (total_day_df / 6).plot(ax=axs[0, 1])
-    axs[0, 1].set_title(f"{pu_do}_monthly_average_count_day")
+    axs[0, 1].set_title(f"0-1. {pu_do}_monthly_average_count_day")
 
     (total_hour_df / 6).plot(ax=axs[1, 1])
-    axs[1, 1].set_title(f"{pu_do}_monthly_average_count_hour")
+    axs[1, 1].set_title(f"1-1. {pu_do}_monthly_average_count_hour")
 
     (total_weekday_df / 6).plot(ax=axs[2, 1])
-    axs[2, 1].set_title(f"{pu_do}_monthly_average_count_weekday")
+    axs[2, 1].set_title(f"2-1. {pu_do}_monthly_average_count_weekday")
     
     # 6. Create a bar chart for trip count for each borough.
     bar_df = total_year_month_df.mean().sort_values(ascending=False)
@@ -449,7 +449,7 @@ def plot_total_trips_interactive(pickup_or_dropoff):
             textcoords="offset points", # Interpret 'xytext' as offset in points
             ha='center',                # Horizontally center label
             va=va)               
-    ax.set_title(f"{pu_do}_monthly_average_trip_count_per_borough")
+    ax.set_title(f"3-1. {pu_do}_monthly_average_trip_count_per_borough")
     plt.suptitle(
         "Total and monthly taxi trip counts in Jan-Jun 2022 in NYC",
         fontsize="xx-large",
@@ -505,24 +505,24 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
     total_weekday_df.sort_index(inplace=True)
     
     if single_month:
-        fig, axs = plt.subplots(3, 2, figsize=(15, 10))
+        fig, axs = plt.subplots(3, 2, figsize=(15, 12))
         total_day_df.plot(ax=axs[0, 0])
-        axs[0, 0].set_title(f"total_trip_count_day_{year_month}")
+        axs[0, 0].set_title(f"0-0. total_trip_count_day_{year_month}")
 
         total_hour_df.plot(ax=axs[1, 0])
-        axs[1, 0].set_title(f"total_trip_count_hour_{year_month}")
+        axs[1, 0].set_title(f"1-0. total_trip_count_hour_{year_month}")
 
         total_weekday_df.plot(ax=axs[2, 0])
-        axs[2, 0].set_title(f"total_trip_count_weekday_{year_month}")
+        axs[2, 0].set_title(f"2-0. total_trip_count_weekday_{year_month}")
         
         (total_day_df / 6).plot(ax=axs[0, 1])
-        axs[0, 1].set_title(f"monthly_average_count_day_{year_month}")
+        axs[0, 1].set_title(f"0-1. monthly_average_count_day_{year_month}")
 
         (total_hour_df / 6).plot(ax=axs[1, 1])
-        axs[1, 1].set_title(f"monthly_average_count_hour_{year_month}")
+        axs[1, 1].set_title(f"1-1. monthly_average_count_hour_{year_month}")
 
         (total_weekday_df / 6).plot(ax=axs[2, 1])
-        axs[2, 1].set_title(f"monthly_average_count_weekday_{year_month}")
+        axs[2, 1].set_title(f"2-1. monthly_average_count_weekday_{year_month}")
         
     else:
         # 4
@@ -538,25 +538,25 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
 
         fig, axs = plt.subplots(4, 2, figsize=(20, 20))
         total_day_df.plot(ax=axs[0, 0])
-        axs[0, 0].set_title(f"{pu_do}_total_trip_count_day")
+        axs[0, 0].set_title(f"0-0. {pu_do}_total_trip_count_day")
 
         total_hour_df.plot(ax=axs[1, 0])
-        axs[1, 0].set_title(f"{pu_do}_total_trip_count_hour")
+        axs[1, 0].set_title(f"1-0. {pu_do}_total_trip_count_hour")
 
         total_weekday_df.plot(ax=axs[2, 0])
-        axs[2, 0].set_title(f"{pu_do}_total_trip_count_weekday")
+        axs[2, 0].set_title(f"2-0. {pu_do}_total_trip_count_weekday")
 
         total_year_month_df.plot(ax=axs[3, 0])
-        axs[3, 0].set_title(f"{pu_do}_total_trip_count_year_month")
+        axs[3, 0].set_title(f"3-0. {pu_do}_total_trip_count_year_month")
         
         (total_day_df / 6).plot(ax=axs[0, 1])
-        axs[0, 1].set_title(f"{pu_do}_monthly_average_count_day")
+        axs[0, 1].set_title(f"0-1. {pu_do}_monthly_average_count_day")
 
         (total_hour_df / 6).plot(ax=axs[1, 1])
-        axs[1, 1].set_title(f"{pu_do}_monthly_average_count_hour")
+        axs[1, 1].set_title(f"1-1. {pu_do}_monthly_average_count_hour")
 
         (total_weekday_df / 6).plot(ax=axs[2, 1])
-        axs[2, 1].set_title(f"{pu_do}_monthly_average_count_weekday")
+        axs[2, 1].set_title(f"2-1. {pu_do}_monthly_average_count_weekday")
         
         bar_df = total_year_month_df.mean().sort_values(ascending=False)
         ax = axs[3, 1]
@@ -589,7 +589,7 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
                 textcoords="offset points", # Interpret 'xytext' as offset in points
                 ha='center',                # Horizontally center label
                 va=va)               
-        ax.set_title(f"{pu_do}_monthly_average_trip_count_per_borough");
+        ax.set_title(f"3-1. {pu_do}_monthly_average_trip_count_per_borough");
 
     pickup_or_dropoff = "pickup"
     if pu_do == "DO":
@@ -677,7 +677,7 @@ def plot_on_map(df, pu_do, exclude_manhattan):
         f'{pu_do}_minute_per_mile'
     ]
 
-    fig, axes = plt.subplots(2, 7, figsize=(25, 8.5))
+    fig, axes = plt.subplots(2, 7, figsize=(30, 9.5))
     axes_idx = []
     for row_idx in range(2):
         for col_idx in range(7):
@@ -687,7 +687,7 @@ def plot_on_map(df, pu_do, exclude_manhattan):
         ax = axes[axes_idx[i]]
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title(col)
+        ax.set_title(str(axes_idx[i][0]) + "-" + str(axes_idx[i][1]) + ". " + col)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("bottom", size="5%", pad=0.2)
         vmin, vmax = df[col].min(), df[col].max()
@@ -697,12 +697,12 @@ def plot_on_map(df, pu_do, exclude_manhattan):
             cax=cax,
             legend=True,
             legend_kwds={
-                # 'label': col,
                 'orientation': 'horizontal'
                 },
             vmin=vmin,
             vmax=vmax
         )
+        plt.ticklabel_format(scilimits=(0,0))
 
     pickup_or_dropoff = "pickup"
     if pu_do == "DO":
@@ -715,7 +715,8 @@ def plot_on_map(df, pu_do, exclude_manhattan):
         fontsize="xx-large",
         fontweight="demibold",
         y=0.94
-        )  
+        )
+    plt.subplots_adjust(top=0.9, hspace=0.1)
 
 
 def print_top_table(df, col, top_n=10, excluding_manhattan=False):
@@ -799,7 +800,7 @@ def plot_socio_on_map():
     cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
 
-    fig, axes = plt.subplots(4, 4, figsize=(20, 20))
+    fig, axes = plt.subplots(4, 4, figsize=(22, 20))
     axes_idx = []
     for row_idx in range(4):
         for col_idx in range(4):
@@ -831,7 +832,7 @@ def plot_socio_on_map():
         ax = axes[axes_idx[i]]
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title(col)
+        ax.set_title(str(axes_idx[i][0]) + "-" + str(axes_idx[i][1]) + ". " + col)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("bottom", size="5%", pad=0.2)
         vmin, vmax = socio_df[col].min(), socio_df[col].max()
@@ -841,12 +842,13 @@ def plot_socio_on_map():
             cax=cax,
             legend=True,
             legend_kwds={
-                # 'label': col,
                 'orientation': 'horizontal'
                 },
             vmin=vmin,
             vmax=vmax
         )
+        plt.ticklabel_format(scilimits=(0,0))
+
     plt.suptitle(
         "Socioeconomic indicators across different community districts",
         fontsize="xx-large",
@@ -941,6 +943,7 @@ def plot_taxi_socio_interactive(taxi_col, socio_col, top_n):
 
     ax.set_xticks([])
     ax.set_yticks([])
+    plt.ticklabel_format(scilimits=(0,0))
 
     # Print out top 10 CDTAs/CDs for taxi_col and socio_col.
     merged_df = pd.merge(
