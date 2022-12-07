@@ -17,5 +17,5 @@ Each set of analyses and how to load, clean, and process datasets can be found i
 Also, raw and processed data files are stored in the "data" folder under the respective folder so that the processes and analyses in the notebooks can be replicated.<br>
 <br>
 <b>Installation</b><br>
-To run the notebooks, please install the required packages by running the following command:<br>
+To run the notebooks, please clone or fork this repo and install the required packages by running the following command:<br>
 pip install -r requirements.txt
