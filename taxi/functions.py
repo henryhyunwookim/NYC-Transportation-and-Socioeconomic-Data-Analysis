@@ -100,8 +100,7 @@ def load_taxi_zones_shp(source_url, folder_name="data", target_filename = "taxi_
                     file.write(res.content)
                 print(f"{target_filename} downloaded in {path}.")
             else:
-                print(f"{target_filename} already exists in {path}.")
-                
+                print(f"{target_filename} already exists in {path}.")                
         
     # Load shape file
     with ZipFile(file_path) as zf:
@@ -1004,6 +1003,13 @@ def create_heatmap(variable, top_n, show_highly_correlated_varaibles):
         merged_df.corr(),
         annot=True
     )
+    # ax.set_title("Correlations among taxi trip and socioeconomic variables")
+    plt.suptitle(
+        "Correlations among taxi trip and socioeconomic variables",
+        fontsize="xx-large",
+        fontweight="demibold",
+        y=0.9
+        )
 
     # Create a dataframe with columns with the highest absolute correlation coefficients.
     top_df = merged_df.corr()
