@@ -16,7 +16,7 @@ import folium
 import warnings
 warnings.filterwarnings("ignore")
 import seaborn as sns
-
+from pathlib import Path
 
 def load_taxi_trip_data(source_url, folder_name="data"):
     """
@@ -38,12 +38,12 @@ def load_taxi_trip_data(source_url, folder_name="data"):
         # Only yellow and green taxi trip data will be used due to limited resources.
         # Also, only Jan-Jun 2022 data will be used for the same constraint.
         if (taxi_type in ["yellow", "green"]) and (month < 7):
-            path = os.getcwd() + "/" + folder_name + "/" + taxi_type
+            path = Path(os.getcwd() + "/" + folder_name + "/" + taxi_type)
             if not os.path.exists(path):
                 os.makedirs(path)
                 print(f"Folder created: {path}")
 
-            file_path = path + "/" + filename
+            file_path = Path(path + "/" + filename)
             if not os.path.isfile(file_path):
                 res = requests.get(url, allow_redirects=True)
                 with open(file_path, 'wb') as file:
@@ -52,7 +52,7 @@ def load_taxi_trip_data(source_url, folder_name="data"):
             else:
                 print(f"{filename} already exists in {path}.")
 
-            df = dd.read_parquet(path + "/" + filename, ignore_metadata_file=True, split_row_groups=True)
+            df = dd.read_parquet(file_path, ignore_metadata_file=True, split_row_groups=True)
             dataframes[taxi_type].append(df)
     
     return dataframes
@@ -88,12 +88,12 @@ def load_taxi_zones_shp(source_url, folder_name="data", target_filename = "taxi_
     for a in doc.find_all("a"):
         url = a["href"]
         if target_filename in url:
-            path = os.getcwd() + "/" + folder_name
+            path = Path(os.getcwd() + "/" + folder_name)
             if not os.path.exists(path):
                 os.makedirs(path)
                 print(f"Folder created: {path}")
 
-            file_path = path + "/" + target_filename
+            file_path = Path(path + "/" + target_filename)
             if not os.path.isfile(file_path):
                 res = requests.get(url, allow_redirects=True, timeout=30)
                 with open(file_path, 'wb') as file:
@@ -264,7 +264,7 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="data"
     cdta_df = cdta_df.reset_index().rename(columns={"index": "CDTA"})
 
     if folder_name != None:
-        path = os.getcwd() + "/" + folder_name
+        path = Path(os.getcwd() + "/" + folder_name)
         if not os.path.exists(path):
             os.makedirs(path)
             print(f"Folder created: {path}")
@@ -281,7 +281,7 @@ def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_n
     """
 
     # Create a folder if not already exists.
-    path = os.getcwd() + "/" + folder_name
+    path = Path(os.getcwd() + "/" + folder_name)
     if not os.path.exists(path):
         os.makedirs(path)
         print(f"Folder created: {path}")
@@ -292,7 +292,7 @@ def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_n
         col_name = location_type + "_year_month"
 
         for year_month in street_hail_df[col_name].unique():
-            file_path = f'{path}/cdta_df_{location_type}_{year_month}.csv'
+            file_path = Path(f'{path}/cdta_df_{location_type}_{year_month}.csv')
             cdta_df = get_cdta_df(street_hail_df[
                 street_hail_df[col_name] == str(year_month)
             ], cdta_geo_dict, taxi_zones_df, None)
@@ -310,7 +310,7 @@ def load_cdta_df(folder_name="data"):
     Load the dataframe created by the get_cdta_df function as a geoDataFrame.
     """
 
-    path = os.getcwd() + "/" + folder_name
+    path = Path(os.getcwd() + "/" + folder_name)
     cdta_df = pd.read_csv(f'{path}/cdta_df.csv', index_col=0)
 
     # Make the loaded csv file into a geo dataframe.
@@ -328,13 +328,13 @@ def load_cdta_df_per_month(folder_name="data",\
     Load the dataframes created by the get_cdta_df_per_month function as geoDataFrames.
     """
 
-    path = os.getcwd() + "/" + folder_name
+    path = Path(os.getcwd() + "/" + folder_name)
 
     dfs = []
     year_months = []
     for location_type in ["PU", "DO"]:
         for year_month in year_month_list:
-            file_path = f'{path}/cdta_df_{location_type}_{year_month}.csv'
+            file_path = Path(f'{path}/cdta_df_{location_type}_{year_month}.csv')
             dfs.append(pd.read_csv(file_path, index_col=0))
             year_months.append(f"{location_type}_{year_month}")
 
@@ -606,10 +606,10 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
         year_month = "Jan-Jun 2022"
     if save_png:
         matplotlib.use('Agg')
-        path = os.getcwd() + "/" + "data/png"
+        path = Path(os.getcwd() + "/" + "data/png")
         if not os.path.exists(path):
             os.makedirs(path)
-        filepath = f'{path}/{year_month}.png'
+        filepath = Path(f'{path}/{year_month}.png')
         chart = fig.get_figure()
         chart.savefig(filepath, dpi=300)
         print(f"{year_month}.png saved in {path}.")
@@ -634,10 +634,10 @@ def plot_trips_per_month(dfs, year_months, pu_do):
     # Create GIF using PNG files.
     print("Getting a GIF file using the PNG files.")
     images = []
-    path = os.getcwd() + "/" + "data/png"
+    path = Path(os.getcwd() + "/" + "data/png")
     for file_name in sorted(os.listdir(path)):
         if (file_name.endswith(".png")) and (pu_do in file_name):
-            file_path = os.path.join(path, file_name)
+            file_path = Path(os.path.join(path, file_name))
             images.append(imageio.imread(file_path))
     imageio.mimsave(path+f'/{pu_do}_trip_counts_per_month.gif', images, duration=2)
     print(f"{pu_do}_trip_counts_per_month.gif saved in {path}.")
