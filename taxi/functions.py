@@ -105,7 +105,7 @@ def load_taxi_zones_shp(source_url, folder_name="data", target_filename = "taxi_
     # Load shape file
     with ZipFile(file_path) as zf:
         zf.extractall(folder_name)
-    taxi_zones_df = gpd.read_file(path + "\\taxi_zones.shp")
+    taxi_zones_df = gpd.read_file(path + "/taxi_zones.shp")
     
     return taxi_zones_df
 
@@ -349,7 +349,7 @@ def plot_total_trips_interactive(pickup_or_dropoff):
     """
 
     # 0. Load data and set pu_do.
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df")
     if pickup_or_dropoff == "Pickup":
         pu_do = "PU"
     elif pickup_or_dropoff == "Dropoff":
@@ -467,7 +467,7 @@ def plot_trips_per_month_interactive(pickup_or_dropoff):
         pu_do = "PU"
     elif pickup_or_dropoff == "Dropoff":
         pu_do = "DO"
-    dfs, year_months = load_cdta_df_per_month(folder_name="data\\cdta_df",
+    dfs, year_months = load_cdta_df_per_month(folder_name="data/cdta_df",
                         year_month_list = ['2022-01', '2022-02', '2022-03', '2022-04', '2022-05', '2022-06'])
     plot_trips_per_month(dfs, year_months, pu_do=pu_do)
 
@@ -606,7 +606,7 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
         year_month = "Jan-Jun 2022"
     if save_png:
         matplotlib.use('Agg')
-        path = os.getcwd() + "/" + "data\\png"
+        path = os.getcwd() + "/" + "data/png"
         if not os.path.exists(path):
             os.makedirs(path)
         filepath = f'{path}/{year_month}.png'
@@ -634,12 +634,12 @@ def plot_trips_per_month(dfs, year_months, pu_do):
     # Create GIF using PNG files.
     print("Getting a GIF file using the PNG files.")
     images = []
-    path = os.getcwd() + "/" + "data\\png"
+    path = os.getcwd() + "/" + "data/png"
     for file_name in sorted(os.listdir(path)):
         if (file_name.endswith(".png")) and (pu_do in file_name):
             file_path = os.path.join(path, file_name)
             images.append(imageio.imread(file_path))
-    imageio.mimsave(path+f'\\{pu_do}_trip_counts_per_month.gif', images, duration=2)
+    imageio.mimsave(path+f'/{pu_do}_trip_counts_per_month.gif', images, duration=2)
     print(f"{pu_do}_trip_counts_per_month.gif saved in {path}.")
 
 
@@ -648,7 +648,7 @@ def plot_on_map_interactive(exclude_manhattan, use_fewer_cols):
     Create a small multiple where each choropleth visualizes a taxi trip variable/stat on a map of NYC.
     """
 
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df")
     if exclude_manhattan:
         cdta_df = cdta_df[cdta_df['borough'] != "Manhattan"]
     
@@ -764,7 +764,7 @@ def get_socio_df(cdta_df):
     Load socioeconomic data for each community district and create a dataframe out of it
     so that each socioeconomic indicator for each community district can be plotted on a map.
     """
-    ori_socio_df = pd.read_csv(os.path.dirname(os.getcwd()) + "\\socio\\data\\socioecoomic.csv", index_col=0)
+    ori_socio_df = pd.read_csv(os.path.dirname(os.getcwd()) + "/socio/data/socioecoomic.csv", index_col=0)
     socio_df = ori_socio_df.copy()
 
     socio_df["Community District"] = socio_df["Community District"].apply(lambda x: x.replace(" ", ""))
@@ -815,7 +815,7 @@ def plot_socio_on_map():
     each choropleth visualizes a socioeconomic variable/stat on a map of NYC.
     """
 
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
 
     fig, axes = plt.subplots(4, 4, figsize=(22, 20))
@@ -881,7 +881,7 @@ def plot_taxi_socio_interactive(taxi_col, socio_col, top_n):
     with details about top N community districts (or CDTAs) in tables.
     """
 
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
 
     # Combine the PU and DO columns by averaging the values.
@@ -978,7 +978,7 @@ def create_heatmap(variable, top_n, show_highly_correlated_varaibles):
     Create a heatmap to see how taxi trips and socioeconomic statistics are or are not correlated.
     """
 
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
 
     taxi_cols = [
@@ -1102,7 +1102,7 @@ def create_interactive_taxi_socio(taxi_col, socio_col):
             'Serious crime rate (per 1,000 residents)']
 
     # Load and merge datasets.            
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
     nyc_df = gpd.read_file(gpd.datasets.get_path('nybb'))
     
