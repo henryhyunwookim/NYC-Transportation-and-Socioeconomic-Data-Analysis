@@ -38,7 +38,7 @@ def load_taxi_trip_data(source_url, folder_name="data"):
         # Only yellow and green taxi trip data will be used due to limited resources.
         # Also, only Jan-Jun 2022 data will be used for the same constraint.
         if (taxi_type in ["yellow", "green"]) and (month < 7):
-            path = os.getcwd() + "\\" + folder_name + "\\" + taxi_type
+            path = os.getcwd() + "/" + folder_name + "/" + taxi_type
             path = Path(path)
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -89,7 +89,7 @@ def load_taxi_zones_shp(source_url, folder_name="data", target_filename = "taxi_
     for a in doc.find_all("a"):
         url = a["href"]
         if target_filename in url:
-            path = os.getcwd() + "\\" + folder_name
+            path = os.getcwd() + "/" + folder_name
             path = Path(path)
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -266,7 +266,7 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="data"
     cdta_df = cdta_df.reset_index().rename(columns={"index": "CDTA"})
 
     if folder_name != None:
-        path = os.getcwd() + "\\" + folder_name
+        path = os.getcwd() + "/" + folder_name
         path = Path(path)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -284,7 +284,7 @@ def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_n
     """
 
     # Create a folder if not already exists.
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
     path = Path(path)
     if not os.path.exists(path):
         os.makedirs(path)
@@ -315,7 +315,7 @@ def load_cdta_df(folder_name="data"):
     Load the dataframe created by the get_cdta_df function as a geoDataFrame.
     """
 
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
     path = Path(path)
     cdta_df = pd.read_csv(f'{path}/cdta_df.csv', index_col=0)
 
@@ -334,7 +334,7 @@ def load_cdta_df_per_month(folder_name="data",\
     Load the dataframes created by the get_cdta_df_per_month function as geoDataFrames.
     """
 
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
     path = Path(path)
 
     dfs = []
@@ -614,7 +614,7 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
         year_month = "Jan-Jun 2022"
     if save_png:
         matplotlib.use('Agg')
-        path = os.getcwd() + "\\" + "data/png"
+        path = os.getcwd() + "/" + "data/png"
         path = Path(path)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -644,14 +644,14 @@ def plot_trips_per_month(dfs, year_months, pu_do):
     # Create GIF using PNG files.
     print("Getting a GIF file using the PNG files.")
     images = []
-    path = os.getcwd() + "\\" + "data/png"
+    path = os.getcwd() + "/" + "data/png"
     path = Path(path)
     for file_name in sorted(os.listdir(path)):
         if (file_name.endswith(".png")) and (pu_do in file_name):
             file_path = os.path.join(path, file_name)
             file_path = Path(file_path)
             images.append(imageio.imread(file_path))
-    gif_path = os.getcwd() + "\\" + "data/png" + f'/{pu_do}_trip_counts_per_month.gif'
+    gif_path = os.getcwd() + "/" + "data/png" + f'/{pu_do}_trip_counts_per_month.gif'
     gif_path = Path(gif_path)
     imageio.mimsave(gif_path, images, duration=2)
     print(f"{pu_do}_trip_counts_per_month.gif saved in {path}.")
