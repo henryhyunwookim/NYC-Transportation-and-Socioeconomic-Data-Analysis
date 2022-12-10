@@ -38,12 +38,12 @@ def load_taxi_trip_data(source_url, folder_name="data"):
         # Only yellow and green taxi trip data will be used due to limited resources.
         # Also, only Jan-Jun 2022 data will be used for the same constraint.
         if (taxi_type in ["yellow", "green"]) and (month < 7):
-            path = os.getcwd() + "\\" + folder_name + "\\" + taxi_type
+            path = os.getcwd() + "/" + folder_name + "/" + taxi_type
             if not os.path.exists(path):
                 os.makedirs(path)
                 print(f"Folder created: {path}")
 
-            file_path = path + "\\" + filename
+            file_path = path + "/" + filename
             if not os.path.isfile(file_path):
                 res = requests.get(url, allow_redirects=True)
                 with open(file_path, 'wb') as file:
@@ -52,7 +52,7 @@ def load_taxi_trip_data(source_url, folder_name="data"):
             else:
                 print(f"{filename} already exists in {path}.")
 
-            df = dd.read_parquet(path + "\\" + filename, ignore_metadata_file=True, split_row_groups=True)
+            df = dd.read_parquet(path + "/" + filename, ignore_metadata_file=True, split_row_groups=True)
             dataframes[taxi_type].append(df)
     
     return dataframes
@@ -88,12 +88,12 @@ def load_taxi_zones_shp(source_url, folder_name="data", target_filename = "taxi_
     for a in doc.find_all("a"):
         url = a["href"]
         if target_filename in url:
-            path = os.getcwd() + "\\" + folder_name
+            path = os.getcwd() + "/" + folder_name
             if not os.path.exists(path):
                 os.makedirs(path)
                 print(f"Folder created: {path}")
 
-            file_path = path + "\\" + target_filename
+            file_path = path + "/" + target_filename
             if not os.path.isfile(file_path):
                 res = requests.get(url, allow_redirects=True, timeout=30)
                 with open(file_path, 'wb') as file:
@@ -264,7 +264,7 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="data"
     cdta_df = cdta_df.reset_index().rename(columns={"index": "CDTA"})
 
     if folder_name != None:
-        path = os.getcwd() + "\\" + folder_name
+        path = os.getcwd() + "/" + folder_name
         if not os.path.exists(path):
             os.makedirs(path)
             print(f"Folder created: {path}")
@@ -281,7 +281,7 @@ def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_n
     """
 
     # Create a folder if not already exists.
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
     if not os.path.exists(path):
         os.makedirs(path)
         print(f"Folder created: {path}")
@@ -310,7 +310,7 @@ def load_cdta_df(folder_name="data"):
     Load the dataframe created by the get_cdta_df function as a geoDataFrame.
     """
 
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
     cdta_df = pd.read_csv(f'{path}/cdta_df.csv', index_col=0)
 
     # Make the loaded csv file into a geo dataframe.
@@ -328,7 +328,7 @@ def load_cdta_df_per_month(folder_name="data",\
     Load the dataframes created by the get_cdta_df_per_month function as geoDataFrames.
     """
 
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
 
     dfs = []
     year_months = []
@@ -606,7 +606,7 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
         year_month = "Jan-Jun 2022"
     if save_png:
         matplotlib.use('Agg')
-        path = os.getcwd() + "\\" + "data\\png"
+        path = os.getcwd() + "/" + "data\\png"
         if not os.path.exists(path):
             os.makedirs(path)
         filepath = f'{path}/{year_month}.png'
@@ -634,7 +634,7 @@ def plot_trips_per_month(dfs, year_months, pu_do):
     # Create GIF using PNG files.
     print("Getting a GIF file using the PNG files.")
     images = []
-    path = os.getcwd() + "\\" + "data\\png"
+    path = os.getcwd() + "/" + "data\\png"
     for file_name in sorted(os.listdir(path)):
         if (file_name.endswith(".png")) and (pu_do in file_name):
             file_path = os.path.join(path, file_name)
