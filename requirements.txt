@@ -1,0 +1,10 @@
+beautifulsoup4==4.11.1
+dask==2022.8.0
+folium==0.12.1.post1
+geopandas==0.12.1
+imageio==2.21.1
+matplotlib==3.5.0
+pandas==1.4.3
+requests==2.27.1
+seaborn==0.11.2
+tabulate==0.8.9
