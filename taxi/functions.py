@@ -1186,4 +1186,5 @@ def create_interactive_taxi_socio(taxi_col, socio_col):
     
     folium.LayerControl().add_to(m)
     m.save('taxi_socio_map.html')
+    print('taxi_socio_map.html saved.')
     webbrowser.open('taxi_socio_map.html')
