@@ -396,25 +396,25 @@ def plot_total_trips_interactive(pickup_or_dropoff):
     fig, axs = plt.subplots(4, 2, figsize=(20, 15))
     fig.tight_layout(pad=5)
     total_day_df.plot(ax=axs[0, 0])
-    axs[0, 0].set_title(f"0-0. {pu_do}_total_trip_count_day")
+    axs[0, 0].set_title(f"0-0. Total trip count for each day of the month")
 
     total_hour_df.plot(ax=axs[1, 0])
-    axs[1, 0].set_title(f"1-0. {pu_do}_total_trip_count_hour")
+    axs[1, 0].set_title(f"1-0. Total trip count for each hour of the day")
 
     total_weekday_df.plot(ax=axs[2, 0])
-    axs[2, 0].set_title(f"2-0. {pu_do}_total_trip_count_weekday")
+    axs[2, 0].set_title(f"2-0. Total trip count for each weekday")
 
     total_year_month_df.plot(ax=axs[3, 0])
-    axs[3, 0].set_title(f"3-0. {pu_do}_total_trip_count_year_month")
+    axs[3, 0].set_title(f"3-0. Total trip count for each month")
     
     (total_day_df / 6).plot(ax=axs[0, 1])
-    axs[0, 1].set_title(f"0-1. {pu_do}_monthly_average_count_day")
+    axs[0, 1].set_title(f"0-1. Monthly average trip count for each day of the month")
 
     (total_hour_df / 6).plot(ax=axs[1, 1])
-    axs[1, 1].set_title(f"1-1. {pu_do}_monthly_average_count_hour")
+    axs[1, 1].set_title(f"1-1. Monthly average trip count for each hour of the day")
 
     (total_weekday_df / 6).plot(ax=axs[2, 1])
-    axs[2, 1].set_title(f"2-1. {pu_do}_monthly_average_count_weekday")
+    axs[2, 1].set_title(f"2-1. Monthly average trip count for each weekday")
     
     # 6. Create a bar chart for trip count for each borough.
     bar_df = total_year_month_df.mean().sort_values(ascending=False)
@@ -448,9 +448,9 @@ def plot_total_trips_interactive(pickup_or_dropoff):
             textcoords="offset points", # Interpret 'xytext' as offset in points
             ha='center',                # Horizontally center label
             va=va)               
-    ax.set_title(f"3-1. {pu_do}_monthly_average_trip_count_per_borough")
+    ax.set_title(f"3-1. Monthly average trip count for each borough")
     plt.suptitle(
-        "Total and monthly taxi trip counts in Jan-Jun 2022 in NYC",
+        f"Total and monthly taxi trip counts based on {pickup_or_dropoff.lower()} in Jan-Jun 2022",
         fontsize="xx-large",
         fontweight="demibold",
         y=1
@@ -503,25 +503,27 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
     total_weekday_df.index = pd.Categorical(total_weekday_df.index, categories=weekdays, ordered=True)
     total_weekday_df.sort_index(inplace=True)
     
+    year_month_without_pu_do = year_month.split("_")[1]
     if single_month:
         fig, axs = plt.subplots(3, 2, figsize=(15, 12))
+
         total_day_df.plot(ax=axs[0, 0])
-        axs[0, 0].set_title(f"0-0. total_trip_count_day_{year_month}")
+        axs[0, 0].set_title(f"0-0. Total trip count for each day")
 
         total_hour_df.plot(ax=axs[1, 0])
-        axs[1, 0].set_title(f"1-0. total_trip_count_hour_{year_month}")
+        axs[1, 0].set_title(f"1-0. Total trip count for each hour of the day")
 
         total_weekday_df.plot(ax=axs[2, 0])
-        axs[2, 0].set_title(f"2-0. total_trip_count_weekday_{year_month}")
+        axs[2, 0].set_title(f"2-0. Total trip count for each weekday")
         
         (total_day_df / 6).plot(ax=axs[0, 1])
-        axs[0, 1].set_title(f"0-1. monthly_average_count_day_{year_month}")
+        axs[0, 1].set_title(f"0-1. Average trip count for each day")
 
         (total_hour_df / 6).plot(ax=axs[1, 1])
-        axs[1, 1].set_title(f"1-1. monthly_average_count_hour_{year_month}")
+        axs[1, 1].set_title(f"1-1. Average trip count for each hour of the day")
 
         (total_weekday_df / 6).plot(ax=axs[2, 1])
-        axs[2, 1].set_title(f"2-1. monthly_average_count_weekday_{year_month}")
+        axs[2, 1].set_title(f"2-1. Average trip count for each weekday")
         
     else:
         # 4
@@ -537,25 +539,25 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
 
         fig, axs = plt.subplots(4, 2, figsize=(20, 20))
         total_day_df.plot(ax=axs[0, 0])
-        axs[0, 0].set_title(f"0-0. {pu_do}_total_trip_count_day")
+        axs[0, 0].set_title(f"0-0. Total trip count for each day of the month")
 
         total_hour_df.plot(ax=axs[1, 0])
-        axs[1, 0].set_title(f"1-0. {pu_do}_total_trip_count_hour")
+        axs[1, 0].set_title(f"1-0. Total trip count for each hour of the day")
 
         total_weekday_df.plot(ax=axs[2, 0])
-        axs[2, 0].set_title(f"2-0. {pu_do}_total_trip_count_weekday")
+        axs[2, 0].set_title(f"2-0. Total trip count for each weekday")
 
         total_year_month_df.plot(ax=axs[3, 0])
-        axs[3, 0].set_title(f"3-0. {pu_do}_total_trip_count_year_month")
+        axs[3, 0].set_title(f"3-0. Total trip count for each month")
         
         (total_day_df / 6).plot(ax=axs[0, 1])
-        axs[0, 1].set_title(f"0-1. {pu_do}_monthly_average_count_day")
+        axs[0, 1].set_title(f"0-1. Monthly average trip count for each day of the month")
 
         (total_hour_df / 6).plot(ax=axs[1, 1])
-        axs[1, 1].set_title(f"1-1. {pu_do}_monthly_average_count_hour")
+        axs[1, 1].set_title(f"1-1. Monthly average trip count for each hour of the day")
 
         (total_weekday_df / 6).plot(ax=axs[2, 1])
-        axs[2, 1].set_title(f"2-1. {pu_do}_monthly_average_count_weekday")
+        axs[2, 1].set_title(f"2-1. Monthly average trip count for each weekday")
         
         bar_df = total_year_month_df.mean().sort_values(ascending=False)
         ax = axs[3, 1]
@@ -588,13 +590,13 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
                 textcoords="offset points", # Interpret 'xytext' as offset in points
                 ha='center',                # Horizontally center label
                 va=va)               
-        ax.set_title(f"3-1. {pu_do}_monthly_average_trip_count_per_borough");
+        ax.set_title(f"3-1. Monthly average trip count for each borough");
 
     pickup_or_dropoff = "pickup"
     if pu_do == "DO":
         pickup_or_dropoff = "dropoff"
     plt.suptitle(
-        f"Total and monthly taxi trip counts based on {pickup_or_dropoff} in each month",
+        f"Total and monthly taxi trip counts based on {pickup_or_dropoff} in {year_month_without_pu_do}",
         fontsize="xx-large",
         fontweight="demibold",
         y=0.96
@@ -641,7 +643,7 @@ def plot_trips_per_month(dfs, year_months, pu_do):
     print(f"{pu_do}_trip_counts_per_month.gif saved in {path}.")
 
 
-def plot_on_map_interactive(exclude_manhattan):
+def plot_on_map_interactive(exclude_manhattan, use_fewer_cols):
     """
     Create a small multiple where each choropleth visualizes a taxi trip variable/stat on a map of NYC.
     """
@@ -651,42 +653,59 @@ def plot_on_map_interactive(exclude_manhattan):
         cdta_df = cdta_df[cdta_df['borough'] != "Manhattan"]
     
     for pu_do in ["PU", "DO"]:
-        plot_on_map(cdta_df, pu_do, exclude_manhattan)
+        plot_on_map(cdta_df, pu_do, exclude_manhattan, use_fewer_cols)
 
 
-def plot_on_map(df, pu_do, exclude_manhattan):
+def plot_on_map(df, pu_do, exclude_manhattan, use_fewer_cols):
     """
     This is a helper function for the plot_on_map_interactive function.
     """
+    if not use_fewer_cols:
+        col_num = 7
+        cols = [
+            f'{pu_do}_total_passenger_count',
+            f'{pu_do}_total_fare',
+            f'{pu_do}_total_congestion_surcharge',
+            f'{pu_do}_total_airport_fee',
+            f'{pu_do}_total_duration (min)',
+            f'{pu_do}_total_trip_distance (mile)',
+            f'{pu_do}_total_trip_count',
+            f'{pu_do}_average_passenger_count',
+            f'{pu_do}_average_fare',
+            f'{pu_do}_average_congestion_surcharge',
+            f'{pu_do}_average_airport_fee',
+            f'{pu_do}_average_duration (min)',
+            f'{pu_do}_average_trip_distance (mile)',
+            f'{pu_do}_minute_per_mile'
+        ]
+        fig, axes = plt.subplots(2, col_num, figsize=(30, 9.5))
 
-    cols = [
-        f'{pu_do}_total_passenger_count',
-        f'{pu_do}_total_fare',
-        f'{pu_do}_total_congestion_surcharge',
-        f'{pu_do}_total_airport_fee',
-        f'{pu_do}_total_duration (min)',
-        f'{pu_do}_total_trip_distance (mile)',
-        f'{pu_do}_total_trip_count',
-        f'{pu_do}_average_passenger_count',
-        f'{pu_do}_average_fare',
-        f'{pu_do}_average_congestion_surcharge',
-        f'{pu_do}_average_airport_fee',
-        f'{pu_do}_average_duration (min)',
-        f'{pu_do}_average_trip_distance (mile)',
-        f'{pu_do}_minute_per_mile'
-    ]
+    else:
+        col_num = 4
+        cols = [
+            f'{pu_do}_total_trip_count',
+            f'{pu_do}_average_fare',
+            f'{pu_do}_average_congestion_surcharge',
+            f'{pu_do}_average_duration (min)',
+            f'{pu_do}_minute_per_mile',
+            f'{pu_do}_average_passenger_count',
+            f'{pu_do}_average_airport_fee',
+            f'{pu_do}_average_trip_distance (mile)'
+        ]
+        fig, axes = plt.subplots(2, col_num, figsize=(20, 11))
 
-    fig, axes = plt.subplots(2, 7, figsize=(30, 9.5))
+
     axes_idx = []
     for row_idx in range(2):
-        for col_idx in range(7):
+        for col_idx in range(col_num):
             axes_idx.append((row_idx, col_idx))
 
     for i, col in enumerate(cols):
         ax = axes[axes_idx[i]]
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title(str(axes_idx[i][0]) + "-" + str(axes_idx[i][1]) + ". " + col)
+        ax_title = col.split("_", 1)[1].replace("_", " ").capitalize()
+        ax.set_title(str(axes_idx[i][0]) + "-" + str(axes_idx[i][1]) + ". " + ax_title)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("bottom", size="5%", pad=0.2)
         vmin, vmax = df[col].min(), df[col].max()
