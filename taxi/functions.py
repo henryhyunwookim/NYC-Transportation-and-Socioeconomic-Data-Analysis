@@ -16,7 +16,7 @@ import folium
 import warnings
 warnings.filterwarnings("ignore")
 import seaborn as sns
-
+from pathlib import Path
 
 def load_taxi_trip_data(source_url, folder_name="data"):
     """
@@ -38,12 +38,13 @@ def load_taxi_trip_data(source_url, folder_name="data"):
         # Only yellow and green taxi trip data will be used due to limited resources.
         # Also, only Jan-Jun 2022 data will be used for the same constraint.
         if (taxi_type in ["yellow", "green"]) and (month < 7):
-            path = os.getcwd() + "\\" + folder_name + "\\" + taxi_type
+            path = os.getcwd() + "/" + folder_name + "/" + taxi_type
+            path = Path(path)
             if not os.path.exists(path):
                 os.makedirs(path)
                 print(f"Folder created: {path}")
 
-            file_path = path + "\\" + filename
+            file_path = Path.home().joinpath(path, filename)
             if not os.path.isfile(file_path):
                 res = requests.get(url, allow_redirects=True)
                 with open(file_path, 'wb') as file:
@@ -52,7 +53,7 @@ def load_taxi_trip_data(source_url, folder_name="data"):
             else:
                 print(f"{filename} already exists in {path}.")
 
-            df = dd.read_parquet(path + "\\" + filename, ignore_metadata_file=True, split_row_groups=True)
+            df = dd.read_parquet(file_path, ignore_metadata_file=True, split_row_groups=True)
             dataframes[taxi_type].append(df)
     
     return dataframes
@@ -88,12 +89,13 @@ def load_taxi_zones_shp(source_url, folder_name="data", target_filename = "taxi_
     for a in doc.find_all("a"):
         url = a["href"]
         if target_filename in url:
-            path = os.getcwd() + "\\" + folder_name
+            path = os.getcwd() + "/" + folder_name
+            path = Path(path)
             if not os.path.exists(path):
                 os.makedirs(path)
                 print(f"Folder created: {path}")
 
-            file_path = path + "\\" + target_filename
+            file_path = Path.home().joinpath(path, target_filename)
             if not os.path.isfile(file_path):
                 res = requests.get(url, allow_redirects=True, timeout=30)
                 with open(file_path, 'wb') as file:
@@ -105,7 +107,7 @@ def load_taxi_zones_shp(source_url, folder_name="data", target_filename = "taxi_
     # Load shape file
     with ZipFile(file_path) as zf:
         zf.extractall(folder_name)
-    taxi_zones_df = gpd.read_file(path + "\\taxi_zones.shp")
+    taxi_zones_df = gpd.read_file(Path.home().joinpath(path, "taxi_zones.shp"))
     
     return taxi_zones_df
 
@@ -264,7 +266,8 @@ def get_cdta_df(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_name="data"
     cdta_df = cdta_df.reset_index().rename(columns={"index": "CDTA"})
 
     if folder_name != None:
-        path = os.getcwd() + "\\" + folder_name
+        path = os.getcwd() + "/" + folder_name
+        path = Path(path)
         if not os.path.exists(path):
             os.makedirs(path)
             print(f"Folder created: {path}")
@@ -281,7 +284,8 @@ def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_n
     """
 
     # Create a folder if not already exists.
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
+    path = Path(path)
     if not os.path.exists(path):
         os.makedirs(path)
         print(f"Folder created: {path}")
@@ -293,6 +297,7 @@ def get_cdta_df_per_month(street_hail_df, cdta_geo_dict, taxi_zones_df, folder_n
 
         for year_month in street_hail_df[col_name].unique():
             file_path = f'{path}/cdta_df_{location_type}_{year_month}.csv'
+            file_path = Path(file_path)
             cdta_df = get_cdta_df(street_hail_df[
                 street_hail_df[col_name] == str(year_month)
             ], cdta_geo_dict, taxi_zones_df, None)
@@ -310,7 +315,8 @@ def load_cdta_df(folder_name="data"):
     Load the dataframe created by the get_cdta_df function as a geoDataFrame.
     """
 
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
+    path = Path(path)
     cdta_df = pd.read_csv(f'{path}/cdta_df.csv', index_col=0)
 
     # Make the loaded csv file into a geo dataframe.
@@ -328,13 +334,15 @@ def load_cdta_df_per_month(folder_name="data",\
     Load the dataframes created by the get_cdta_df_per_month function as geoDataFrames.
     """
 
-    path = os.getcwd() + "\\" + folder_name
+    path = os.getcwd() + "/" + folder_name
+    path = Path(path)
 
     dfs = []
     year_months = []
     for location_type in ["PU", "DO"]:
         for year_month in year_month_list:
             file_path = f'{path}/cdta_df_{location_type}_{year_month}.csv'
+            file_path = Path(file_path)
             dfs.append(pd.read_csv(file_path, index_col=0))
             year_months.append(f"{location_type}_{year_month}")
 
@@ -349,7 +357,7 @@ def plot_total_trips_interactive(pickup_or_dropoff):
     """
 
     # 0. Load data and set pu_do.
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df")
     if pickup_or_dropoff == "Pickup":
         pu_do = "PU"
     elif pickup_or_dropoff == "Dropoff":
@@ -396,25 +404,25 @@ def plot_total_trips_interactive(pickup_or_dropoff):
     fig, axs = plt.subplots(4, 2, figsize=(20, 15))
     fig.tight_layout(pad=5)
     total_day_df.plot(ax=axs[0, 0])
-    axs[0, 0].set_title(f"0-0. {pu_do}_total_trip_count_day")
+    axs[0, 0].set_title(f"0-0. Total trip count for each day of the month")
 
     total_hour_df.plot(ax=axs[1, 0])
-    axs[1, 0].set_title(f"1-0. {pu_do}_total_trip_count_hour")
+    axs[1, 0].set_title(f"1-0. Total trip count for each hour of the day")
 
     total_weekday_df.plot(ax=axs[2, 0])
-    axs[2, 0].set_title(f"2-0. {pu_do}_total_trip_count_weekday")
+    axs[2, 0].set_title(f"2-0. Total trip count for each weekday")
 
     total_year_month_df.plot(ax=axs[3, 0])
-    axs[3, 0].set_title(f"3-0. {pu_do}_total_trip_count_year_month")
+    axs[3, 0].set_title(f"3-0. Total trip count for each month")
     
     (total_day_df / 6).plot(ax=axs[0, 1])
-    axs[0, 1].set_title(f"0-1. {pu_do}_monthly_average_count_day")
+    axs[0, 1].set_title(f"0-1. Monthly average trip count for each day of the month")
 
     (total_hour_df / 6).plot(ax=axs[1, 1])
-    axs[1, 1].set_title(f"1-1. {pu_do}_monthly_average_count_hour")
+    axs[1, 1].set_title(f"1-1. Monthly average trip count for each hour of the day")
 
     (total_weekday_df / 6).plot(ax=axs[2, 1])
-    axs[2, 1].set_title(f"2-1. {pu_do}_monthly_average_count_weekday")
+    axs[2, 1].set_title(f"2-1. Monthly average trip count for each weekday")
     
     # 6. Create a bar chart for trip count for each borough.
     bar_df = total_year_month_df.mean().sort_values(ascending=False)
@@ -448,9 +456,9 @@ def plot_total_trips_interactive(pickup_or_dropoff):
             textcoords="offset points", # Interpret 'xytext' as offset in points
             ha='center',                # Horizontally center label
             va=va)               
-    ax.set_title(f"3-1. {pu_do}_monthly_average_trip_count_per_borough")
+    ax.set_title(f"3-1. Monthly average trip count for each borough")
     plt.suptitle(
-        "Total and monthly taxi trip counts in Jan-Jun 2022 in NYC",
+        f"Total and monthly taxi trip counts based on {pickup_or_dropoff.lower()} in Jan-Jun 2022",
         fontsize="xx-large",
         fontweight="demibold",
         y=1
@@ -467,7 +475,7 @@ def plot_trips_per_month_interactive(pickup_or_dropoff):
         pu_do = "PU"
     elif pickup_or_dropoff == "Dropoff":
         pu_do = "DO"
-    dfs, year_months = load_cdta_df_per_month(folder_name="data\\cdta_df",
+    dfs, year_months = load_cdta_df_per_month(folder_name="data/cdta_df",
                         year_month_list = ['2022-01', '2022-02', '2022-03', '2022-04', '2022-05', '2022-06'])
     plot_trips_per_month(dfs, year_months, pu_do=pu_do)
 
@@ -503,25 +511,27 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
     total_weekday_df.index = pd.Categorical(total_weekday_df.index, categories=weekdays, ordered=True)
     total_weekday_df.sort_index(inplace=True)
     
+    year_month_without_pu_do = year_month.split("_")[1]
     if single_month:
         fig, axs = plt.subplots(3, 2, figsize=(15, 12))
+
         total_day_df.plot(ax=axs[0, 0])
-        axs[0, 0].set_title(f"0-0. total_trip_count_day_{year_month}")
+        axs[0, 0].set_title(f"0-0. Total trip count for each day")
 
         total_hour_df.plot(ax=axs[1, 0])
-        axs[1, 0].set_title(f"1-0. total_trip_count_hour_{year_month}")
+        axs[1, 0].set_title(f"1-0. Total trip count for each hour of the day")
 
         total_weekday_df.plot(ax=axs[2, 0])
-        axs[2, 0].set_title(f"2-0. total_trip_count_weekday_{year_month}")
+        axs[2, 0].set_title(f"2-0. Total trip count for each weekday")
         
         (total_day_df / 6).plot(ax=axs[0, 1])
-        axs[0, 1].set_title(f"0-1. monthly_average_count_day_{year_month}")
+        axs[0, 1].set_title(f"0-1. Average trip count for each day")
 
         (total_hour_df / 6).plot(ax=axs[1, 1])
-        axs[1, 1].set_title(f"1-1. monthly_average_count_hour_{year_month}")
+        axs[1, 1].set_title(f"1-1. Average trip count for each hour of the day")
 
         (total_weekday_df / 6).plot(ax=axs[2, 1])
-        axs[2, 1].set_title(f"2-1. monthly_average_count_weekday_{year_month}")
+        axs[2, 1].set_title(f"2-1. Average trip count for each weekday")
         
     else:
         # 4
@@ -537,25 +547,25 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
 
         fig, axs = plt.subplots(4, 2, figsize=(20, 20))
         total_day_df.plot(ax=axs[0, 0])
-        axs[0, 0].set_title(f"0-0. {pu_do}_total_trip_count_day")
+        axs[0, 0].set_title(f"0-0. Total trip count for each day of the month")
 
         total_hour_df.plot(ax=axs[1, 0])
-        axs[1, 0].set_title(f"1-0. {pu_do}_total_trip_count_hour")
+        axs[1, 0].set_title(f"1-0. Total trip count for each hour of the day")
 
         total_weekday_df.plot(ax=axs[2, 0])
-        axs[2, 0].set_title(f"2-0. {pu_do}_total_trip_count_weekday")
+        axs[2, 0].set_title(f"2-0. Total trip count for each weekday")
 
         total_year_month_df.plot(ax=axs[3, 0])
-        axs[3, 0].set_title(f"3-0. {pu_do}_total_trip_count_year_month")
+        axs[3, 0].set_title(f"3-0. Total trip count for each month")
         
         (total_day_df / 6).plot(ax=axs[0, 1])
-        axs[0, 1].set_title(f"0-1. {pu_do}_monthly_average_count_day")
+        axs[0, 1].set_title(f"0-1. Monthly average trip count for each day of the month")
 
         (total_hour_df / 6).plot(ax=axs[1, 1])
-        axs[1, 1].set_title(f"1-1. {pu_do}_monthly_average_count_hour")
+        axs[1, 1].set_title(f"1-1. Monthly average trip count for each hour of the day")
 
         (total_weekday_df / 6).plot(ax=axs[2, 1])
-        axs[2, 1].set_title(f"2-1. {pu_do}_monthly_average_count_weekday")
+        axs[2, 1].set_title(f"2-1. Monthly average trip count for each weekday")
         
         bar_df = total_year_month_df.mean().sort_values(ascending=False)
         ax = axs[3, 1]
@@ -588,13 +598,13 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
                 textcoords="offset points", # Interpret 'xytext' as offset in points
                 ha='center',                # Horizontally center label
                 va=va)               
-        ax.set_title(f"3-1. {pu_do}_monthly_average_trip_count_per_borough");
+        ax.set_title(f"3-1. Monthly average trip count for each borough");
 
     pickup_or_dropoff = "pickup"
     if pu_do == "DO":
         pickup_or_dropoff = "dropoff"
     plt.suptitle(
-        f"Total and monthly taxi trip counts based on {pickup_or_dropoff} in each month",
+        f"Total and monthly taxi trip counts based on {pickup_or_dropoff} in {year_month_without_pu_do}",
         fontsize="xx-large",
         fontweight="demibold",
         y=0.96
@@ -604,10 +614,12 @@ def plot_total_trips(cdta_df, pu_do, single_month, year_month, save_png):
         year_month = "Jan-Jun 2022"
     if save_png:
         matplotlib.use('Agg')
-        path = os.getcwd() + "\\" + "data\\png"
+        path = os.getcwd() + "/" + "data/png"
+        path = Path(path)
         if not os.path.exists(path):
             os.makedirs(path)
         filepath = f'{path}/{year_month}.png'
+        filepath = Path(filepath)
         chart = fig.get_figure()
         chart.savefig(filepath, dpi=300)
         print(f"{year_month}.png saved in {path}.")
@@ -632,61 +644,82 @@ def plot_trips_per_month(dfs, year_months, pu_do):
     # Create GIF using PNG files.
     print("Getting a GIF file using the PNG files.")
     images = []
-    path = os.getcwd() + "\\" + "data\\png"
+    path = os.getcwd() + "/" + "data/png"
+    path = Path(path)
     for file_name in sorted(os.listdir(path)):
         if (file_name.endswith(".png")) and (pu_do in file_name):
             file_path = os.path.join(path, file_name)
+            file_path = Path(file_path)
             images.append(imageio.imread(file_path))
-    imageio.mimsave(path+f'\\{pu_do}_trip_counts_per_month.gif', images, duration=2)
+    gif_path = os.getcwd() + "/" + "data/png" + f'/{pu_do}_trip_counts_per_month.gif'
+    gif_path = Path(gif_path)
+    imageio.mimsave(gif_path, images, duration=2)
     print(f"{pu_do}_trip_counts_per_month.gif saved in {path}.")
 
 
-def plot_on_map_interactive(exclude_manhattan):
+def plot_on_map_interactive(exclude_manhattan, use_fewer_cols):
     """
     Create a small multiple where each choropleth visualizes a taxi trip variable/stat on a map of NYC.
     """
 
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df")
     if exclude_manhattan:
         cdta_df = cdta_df[cdta_df['borough'] != "Manhattan"]
     
     for pu_do in ["PU", "DO"]:
-        plot_on_map(cdta_df, pu_do, exclude_manhattan)
+        plot_on_map(cdta_df, pu_do, exclude_manhattan, use_fewer_cols)
 
 
-def plot_on_map(df, pu_do, exclude_manhattan):
+def plot_on_map(df, pu_do, exclude_manhattan, use_fewer_cols):
     """
     This is a helper function for the plot_on_map_interactive function.
     """
+    if not use_fewer_cols:
+        col_num = 7
+        cols = [
+            f'{pu_do}_total_passenger_count',
+            f'{pu_do}_total_fare',
+            f'{pu_do}_total_congestion_surcharge',
+            f'{pu_do}_total_airport_fee',
+            f'{pu_do}_total_duration (min)',
+            f'{pu_do}_total_trip_distance (mile)',
+            f'{pu_do}_total_trip_count',
+            f'{pu_do}_average_passenger_count',
+            f'{pu_do}_average_fare',
+            f'{pu_do}_average_congestion_surcharge',
+            f'{pu_do}_average_airport_fee',
+            f'{pu_do}_average_duration (min)',
+            f'{pu_do}_average_trip_distance (mile)',
+            f'{pu_do}_minute_per_mile'
+        ]
+        fig, axes = plt.subplots(2, col_num, figsize=(30, 9.5))
 
-    cols = [
-        f'{pu_do}_total_passenger_count',
-        f'{pu_do}_total_fare',
-        f'{pu_do}_total_congestion_surcharge',
-        f'{pu_do}_total_airport_fee',
-        f'{pu_do}_total_duration (min)',
-        f'{pu_do}_total_trip_distance (mile)',
-        f'{pu_do}_total_trip_count',
-        f'{pu_do}_average_passenger_count',
-        f'{pu_do}_average_fare',
-        f'{pu_do}_average_congestion_surcharge',
-        f'{pu_do}_average_airport_fee',
-        f'{pu_do}_average_duration (min)',
-        f'{pu_do}_average_trip_distance (mile)',
-        f'{pu_do}_minute_per_mile'
-    ]
+    else:
+        col_num = 4
+        cols = [
+            f'{pu_do}_total_trip_count',
+            f'{pu_do}_average_fare',
+            f'{pu_do}_average_congestion_surcharge',
+            f'{pu_do}_average_duration (min)',
+            f'{pu_do}_minute_per_mile',
+            f'{pu_do}_average_passenger_count',
+            f'{pu_do}_average_airport_fee',
+            f'{pu_do}_average_trip_distance (mile)'
+        ]
+        fig, axes = plt.subplots(2, col_num, figsize=(20, 11))
 
-    fig, axes = plt.subplots(2, 7, figsize=(30, 9.5))
+
     axes_idx = []
     for row_idx in range(2):
-        for col_idx in range(7):
+        for col_idx in range(col_num):
             axes_idx.append((row_idx, col_idx))
 
     for i, col in enumerate(cols):
         ax = axes[axes_idx[i]]
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title(str(axes_idx[i][0]) + "-" + str(axes_idx[i][1]) + ". " + col)
+        ax_title = col.split("_", 1)[1].replace("_", " ").capitalize()
+        ax.set_title(str(axes_idx[i][0]) + "-" + str(axes_idx[i][1]) + ". " + ax_title)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("bottom", size="5%", pad=0.2)
         vmin, vmax = df[col].min(), df[col].max()
@@ -745,7 +778,7 @@ def get_socio_df(cdta_df):
     Load socioeconomic data for each community district and create a dataframe out of it
     so that each socioeconomic indicator for each community district can be plotted on a map.
     """
-    ori_socio_df = pd.read_csv(os.path.dirname(os.getcwd()) + "\\socio\\data\\socioecoomic.csv", index_col=0)
+    ori_socio_df = pd.read_csv(os.path.dirname(os.getcwd()) + "/socio/data/socioecoomic.csv", index_col=0)
     socio_df = ori_socio_df.copy()
 
     socio_df["Community District"] = socio_df["Community District"].apply(lambda x: x.replace(" ", ""))
@@ -796,7 +829,7 @@ def plot_socio_on_map():
     each choropleth visualizes a socioeconomic variable/stat on a map of NYC.
     """
 
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
 
     fig, axes = plt.subplots(4, 4, figsize=(22, 20))
@@ -862,7 +895,7 @@ def plot_taxi_socio_interactive(taxi_col, socio_col, top_n):
     with details about top N community districts (or CDTAs) in tables.
     """
 
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
 
     # Combine the PU and DO columns by averaging the values.
@@ -959,7 +992,7 @@ def create_heatmap(variable, top_n, show_highly_correlated_varaibles):
     Create a heatmap to see how taxi trips and socioeconomic statistics are or are not correlated.
     """
 
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
 
     taxi_cols = [
@@ -1083,7 +1116,7 @@ def create_interactive_taxi_socio(taxi_col, socio_col):
             'Serious crime rate (per 1,000 residents)']
 
     # Load and merge datasets.            
-    cdta_df = load_cdta_df(folder_name="data\\cdta_df").set_geometry("geometry")
+    cdta_df = load_cdta_df(folder_name="data/cdta_df").set_geometry("geometry")
     socio_df = get_socio_df(cdta_df).set_geometry("geometry")
     nyc_df = gpd.read_file(gpd.datasets.get_path('nybb'))
     
@@ -1153,4 +1186,5 @@ def create_interactive_taxi_socio(taxi_col, socio_col):
     
     folium.LayerControl().add_to(m)
     m.save('taxi_socio_map.html')
+    print('taxi_socio_map.html saved.')
     webbrowser.open('taxi_socio_map.html')
