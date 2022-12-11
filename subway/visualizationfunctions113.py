@@ -5,6 +5,8 @@ import ipywidgets as widgets
 import matplotlib
 import matplotlib.pyplot as plt
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from pathlib import Path
 
 
 def load_cdta_df(folder_name="data"):
@@ -19,8 +21,6 @@ def load_cdta_df(folder_name="data"):
     cdta_df['geometry'] = gpd.GeoSeries.from_wkt(cdta_df['geometry'])
     cdta_df = gpd.GeoDataFrame(cdta_df, geometry='geometry')
     
-    print(f"cdta_df loaded from {path}.")
-
     return cdta_df
 
 
@@ -79,27 +79,27 @@ def plot_total_stations_interactive(entry_or_exit):
     #   create plots for total and average station counts based on different criteria.
     fig, axs = plt.subplots(4, 2, figsize=(20, 20))
     total_day_df.plot(ax=axs[0, 0])
-    axs[0, 0].set_title(f"{selectOptions}_total_station_count_day")
+    axs[0, 0].set_title(f"0-0. Total commuter count for each day")
 
     total_hour_df.plot(ax=axs[1, 0])
-    axs[1, 0].set_title(f"{selectOptions}_total_station_count_hour")
+    axs[1, 0].set_title(f"1-0. Total commuter count for each hour of the day")
 
     total_weekday_df.plot(ax=axs[2, 0])
-    axs[2, 0].set_title(f"{selectOptions}_total_station_count_weekday")
+    axs[2, 0].set_title(f"2-0. Total commuter count for each weekday")
 
     total_year_month_df.plot(ax=axs[3, 0])
-    axs[3, 0].set_title(f"{selectOptions}_total_station_count_year_month")
+    axs[3, 0].set_title(f"3-0. Total commuter count for each month")
 
     (total_day_df / 6).plot(ax=axs[0, 1])
-    axs[0, 1].set_title(f"{selectOptions}_monthly_average_count_day")
+    axs[0, 1].set_title(f"0-1. Average commuter count for each day ")
 
     (total_hour_df / 6).plot(ax=axs[1, 1])
-    axs[1, 1].set_title(f"{selectOptions}_monthly_average_count_hour")
+    axs[1, 1].set_title(f"1-1. Average commuter count for each hour of the day")
 
     (total_weekday_df / 6).plot(ax=axs[2, 1])
-    axs[2, 1].set_title(f"{selectOptions}_monthly_average_count_weekday")
+    axs[2, 1].set_title(f"2-1. Average commuter count for each weekday")
 
-    # 6. Create a bar chart for trip count for each borough.
+    # 6. Create a bar chart for commuter count for each borough.
     bar_df = total_year_month_df.mean().sort_values(ascending=False)
     ax = axs[3, 1]
     ax.bar(bar_df.index, bar_df.values)
@@ -131,23 +131,24 @@ def plot_total_stations_interactive(entry_or_exit):
             textcoords="offset points", # Interpret 'xytext' as offset in points
             ha='center',                # Horizontally center label
             va=va)               
-    ax.set_title(f" {selectOptions}_monthly_average_station_count_per_borough")
+    ax.set_title(f"Average monthly commuter count")
     plt.suptitle(
-        "Total and monthly subway station counts in Jan-Jun 2022 in NYC",
+        "Total and monthly subway commuter counts from Jan-Jun 2022 in NYC",
         fontsize="xx-large",
         fontweight="demibold",
         y=1
         );
     
 
+    
+
 def plot_frequent_stations_interactive(boroname):
     """
     Plot interactive bar charts based on Burough selection.
     """
-
-    # 0. Station Data.
+    # 0. Load Station Borough data
     df = pd.read_csv('data\subway_df\station_boroughs_polygon.csv')
-
+    df = df.drop_duplicates(subset=['stop_name'],keep=False)
     if boroname == "Brooklyn":
         selectOptions = "Brooklyn"
         color = 'red'
@@ -164,20 +165,87 @@ def plot_frequent_stations_interactive(boroname):
         selectOptions = "Staten Island"
         color = 'yellow'
         
-    subdf = df[df['BoroName']==selectOptions].drop_duplicates(subset=['stop_name'],keep=False)
-    subdf = subdf.sort_values('net_traffic',ascending = False)
+#     subdf = df[df['BoroName']==selectOptions].drop_duplicates(subset=['stop_name'],keep=False)
+    subdf = df[df['BoroName']==selectOptions].sort_values('net_traffic',ascending = False)
     
     x = [i[0] for i in subdf.iloc[:10,17:18].values.tolist()]
 
     values = [int(i[0]) for i in subdf.iloc[:10,9:10].values.tolist()]
-
-    fig = plt.figure(figsize = (28, 5))
+    
+    x.reverse()
+    values.reverse()
+    
+    fig = plt.figure(figsize = (15, 10))
 
     # creating the bar plot
-    plt.bar(x, values, color =color,
-            width = 0.8)
+    plt.barh(x, values, color =color, height=0.3)
 
     plt.xlabel("Station Name")
     plt.ylabel("Net Traffic")
-    plt.title(f"Top 10 stations")
-    plt.show()    
+    plt.title(f"Top 10 stations by traffic")
+    plt.show()  
+    
+def plot_on_map_interactive(exclude_manhattan):
+    """
+    Create a small multiple plot where each choropleth visualizes a station entries and exits variable/stat on a map of NYC.
+    """
+
+    cdta_df = load_cdta_df(folder_name="data\\subway_df")
+    if exclude_manhattan:
+        cdta_df = cdta_df[cdta_df['borough'] != "Manhattan"]
+
+    plot_on_map(cdta_df,  exclude_manhattan)
+        
+
+
+def plot_on_map(df, exclude_manhattan):
+    """
+    This is a helper function for the plot_on_map_interactive function.
+    """
+    col_num = 2
+    cols = [
+        f'net_entries',
+        f'net_exits'
+    ]
+    fig, axes = plt.subplots(1, col_num, figsize=(20, 11))
+
+    axes_idx = []
+    for row_idx in range(1):
+        for col_idx in range(col_num):
+            axes_idx.append((row_idx, col_idx))
+
+    for i,col in enumerate(cols):
+
+        ax = axes[i]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax_title = col.split("_", 1)[1].replace("_", " ").capitalize()
+        ax.set_title(str(0) + "-" + str(i) + ". " + ax_title)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("bottom", size="5%", pad=0.2)
+        vmin, vmax = df[col].min(), df[col].max()
+        df[[col, 'geometry']].plot(
+            column=col,
+            ax=ax,
+            cax=cax,
+            legend=True,
+            legend_kwds={
+                'orientation': 'horizontal'
+                },
+            vmin=vmin,
+            vmax=vmax
+        )
+        plt.ticklabel_format(scilimits=(0,0))
+
+
+    title = f"Commuter counts across different community districts(CDTA)"
+    if exclude_manhattan:
+        title = title + ", excluding Manhattan"
+    plt.suptitle(
+        title,
+        fontsize="xx-large",
+        fontweight="demibold",
+        y=0.94
+        )
+    plt.subplots_adjust(top=0.9, hspace=0.1)
+   
