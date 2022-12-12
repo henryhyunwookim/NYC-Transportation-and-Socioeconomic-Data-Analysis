@@ -1,5 +1,5 @@
 ,station,net_entries,net_exits,cdtaCode,borough
-0,103_st,15129,15129,MN11,Manhattan
+0,103_st,15129,15129,MN64,Manhattan
 1,103_st_corona,8717,8717,QN04,Queens
 2,104_st,9233,9233,QN10,Queens
 3,110_st,6037,6037,MN11,Manhattan
@@ -97,7 +97,7 @@
 95,71_st,5075,5075,BK11,Brooklyn
 96,72_st,29262,29262,MN64,Manhattan
 97,72_st_2_ave,17321,17321,MN05,Manhattan
-98,74_st_broadway,5115,5115,QN03,Queens
+98,74_st_broadway,5115,5115,QN04,Queens
 99,75_av,10350,10350,QN06,Queens
 100,75_st_elderts,5145,5145,MN05,Manhattan
 101,77_st,19075,19075,MN08,Manhattan
